@@ -5,7 +5,7 @@ import MainLayout from './layouts/MainLayout';
 
 function App() {
   return (
-    <Router>
+    <Router basename="/CIRURTEC">
       <Routes>
         <Route path="/" element={<Home />} />
         
