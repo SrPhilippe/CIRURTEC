@@ -1,12 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Trash2, Copy, Users, Briefcase, Sparkles, X, Loader2, Mic, MicOff, MapPin, Truck } from 'lucide-react';
+import { Plus, Trash2, Copy, Users, Briefcase, Sparkles, X, Loader2, Mic, MicOff, MapPin, Truck, ChevronDown, ChevronUp, Layers } from 'lucide-react';
 import './EmailViagem.css';
 
 // --- CONFIGURAÇÃO DA API GEMINI ---
 const apiKey = ""; // A chave será injetada automaticamente pelo ambiente
 
 export default function TravelEmail() {
-  const [trips, setTrips] = useState([createEmptyTrip()]);
+  // --- ESTADO PRINCIPAL: GRUPOS DE VIAGEM ---
+  const [tripGroups, setTripGroups] = useState([createEmptyTripGroup()]);
+
   const [copied, setCopied] = useState(false);
   
   // Estados para funcionalidades de IA e Voz
@@ -22,17 +24,34 @@ export default function TravelEmail() {
 
   const previewRef = useRef(null);
 
-  function createEmptyTrip() {
+  // Inicializa o primeiro destino do primeiro grupo como expandido
+  useEffect(() => {
+    if (tripGroups.length > 0 && tripGroups[0].destinations.length > 0 && tripGroups[0].expandedDestinationId === null) {
+        const newGroups = [...tripGroups];
+        newGroups[0].expandedDestinationId = newGroups[0].destinations[0].id;
+        setTripGroups(newGroups);
+    }
+  }, []);
+
+  function createEmptyDestination() {
     return {
-      id: Date.now(),
-      technicians: [''],
+      id: Date.now() + Math.random(),
       city: '',
       startDate: '',
       endDate: '',
       visitType: 'PREVENTIVA',
       returnSameDay: false,
-      tasks: [''],
-      transport: 'VEÍCULO DA EMPRESA'
+      tasks: ['']
+    };
+  }
+
+  function createEmptyTripGroup() {
+    return {
+        id: Date.now() + Math.random(),
+        technicians: [''],
+        transport: 'VEÍCULO DA EMPRESA',
+        destinations: [createEmptyDestination()],
+        expandedDestinationId: null
     };
   }
 
@@ -100,16 +119,17 @@ export default function TravelEmail() {
       
       Regras de extração:
       1. technicians: Lista de nomes de pessoas citadas.
-      2. city: Cidade de destino.
-      3. startDate: Data de ida no formato YYYY-MM-DD. Assuma o ano corrente se não citado.
-      4. endDate: Data de volta no formato YYYY-MM-DD. Se for voltar no mesmo dia, igual à startDate.
-      5. visitType: Escolha ESTRITAMENTE um destes: "PREVENTIVA", "CORRETIVA", "PREVENTIVA + CORRETIVA", "CEMIG", "INSTALAÇÃO", "VISITA TÉCNICA", "OUTROS". Se não estiver claro, use "OUTROS".
-      6. tasks: Lista de locais e o que será feito (ex: "Santa Casa - Troca de Switch"). Melhore o texto para soar profissional.
-      7. transport: Escolha um destes: "VEÍCULO PARTICULAR", "VEÍCULO DA EMPRESA", "ÔNIBUS". Padrão: "VEÍCULO DA EMPRESA".
-      8. returnSameDay: Booleano. True se o texto deixar claro que voltam no mesmo dia (ex: "bate e volta", "diário"), False caso contrário.
+      2. destinations: Lista de objetos contendo:
+         - city: Cidade de destino.
+         - startDate: Data de ida no formato YYYY-MM-DD. Assuma o ano corrente se não citado.
+         - endDate: Data de volta no formato YYYY-MM-DD. Se for voltar no mesmo dia, igual à startDate.
+         - visitType: Escolha ESTRITAMENTE um destes: "PREVENTIVA", "CORRETIVA", "PREVENTIVA + CORRETIVA", "CEMIG", "INSTALAÇÃO", "VISITA TÉCNICA", "OUTROS". Se não estiver claro, use "OUTROS".
+         - tasks: Lista de locais e o que será feito (ex: "Santa Casa - Troca de Switch"). Melhore o texto para soar profissional.
+         - returnSameDay: Booleano. True se o texto deixar claro que voltam no mesmo dia (ex: "bate e volta", "diário"), False caso contrário.
+      3. transport: Escolha um destes: "VEÍCULO PARTICULAR", "VEÍCULO DA EMPRESA", "ÔNIBUS". Padrão: "VEÍCULO DA EMPRESA".
 
       Responda APENAS o JSON, sem markdown.
-      Exemplo de JSON: { "technicians": ["João"], "city": "Betim", "startDate": "2023-10-20", "endDate": "2023-10-20", "visitType": "CORRETIVA", "tasks": ["Hospital Regional - Reparo"], "transport": "VEÍCULO DA EMPRESA", "returnSameDay": false }
+      Exemplo de JSON: { "technicians": ["João"], "destinations": [{ "city": "Betim", "startDate": "2023-10-20", "endDate": "2023-10-20", "visitType": "CORRETIVA", "tasks": ["Hospital Regional - Reparo"], "returnSameDay": false }], "transport": "VEÍCULO DA EMPRESA" }
     `;
 
     try {
@@ -127,15 +147,31 @@ export default function TravelEmail() {
       
       const extractedData = JSON.parse(jsonStr);
 
-      const newTrip = {
-        ...createEmptyTrip(),
-        id: Date.now(),
-        ...extractedData,
-        technicians: Array.isArray(extractedData.technicians) ? extractedData.technicians : [extractedData.technicians || ''],
-        tasks: Array.isArray(extractedData.tasks) ? extractedData.tasks : [extractedData.tasks || '']
-      };
+      // CRIA UM NOVO GRUPO COM OS DADOS IMPORTADOS
+      const newGroup = createEmptyTripGroup();
 
-      setTrips([...trips, newTrip]);
+      if (extractedData.technicians && Array.isArray(extractedData.technicians)) {
+        newGroup.technicians = extractedData.technicians;
+      }
+      if (extractedData.transport) {
+        newGroup.transport = extractedData.transport;
+      }
+
+      if (extractedData.destinations && Array.isArray(extractedData.destinations)) {
+        const newDestinations = extractedData.destinations.map(dest => ({
+            ...createEmptyDestination(),
+            ...dest,
+            tasks: Array.isArray(dest.tasks) ? dest.tasks : [dest.tasks || '']
+        }));
+        newGroup.destinations = newDestinations;
+        if (newDestinations.length > 0) {
+            newGroup.expandedDestinationId = newDestinations[0].id;
+        }
+      }
+
+      // Adiciona o novo grupo à lista existente
+      setTripGroups([...tripGroups, newGroup]);
+
       setIsImportModalOpen(false);
       setImportText('');
     } catch (error) {
@@ -148,14 +184,18 @@ export default function TravelEmail() {
 
   const generateEmailSubject = async () => {
     setIsGeneratingSubject(true);
-    const tripsSummary = trips.map(t => 
-      `${t.city} (${t.startDate}): ${t.visitType} com ${t.technicians.join(', ')}`
-    ).join(' | ');
+    
+    // Coleta resumo de todos os grupos
+    const allSummaries = tripGroups.map(group => {
+        const techs = group.technicians.join(', ');
+        const dests = group.destinations.map(d => `${d.city} (${d.startDate})`).join(', ');
+        return `Equipe: ${techs} -> ${dests}`;
+    }).join(' | ');
 
     const prompt = `
       Crie um assunto de e-mail profissional, curto e direto para as seguintes viagens técnicas. 
       Padrão desejado: "Programação de Viagem: [Cidades Principais] - [Datas Resumidas]".
-      Dados: ${tripsSummary}
+      Dados: ${allSummaries}
       Responda APENAS o texto do assunto.
     `;
 
@@ -178,55 +218,102 @@ export default function TravelEmail() {
 
   // --- MANIPULAÇÃO DE ESTADO ---
 
-  const addTrip = () => {
-    setTrips([...trips, { ...createEmptyTrip(), id: Date.now() + Math.random() }]);
+  // GRUPOS
+  const addTripGroup = () => {
+    setTripGroups([...tripGroups, createEmptyTripGroup()]);
   };
 
-  const removeTrip = (index) => {
-    if (trips.length === 1) return;
-    const newTrips = [...trips];
-    newTrips.splice(index, 1);
-    setTrips(newTrips);
+  const removeTripGroup = (index) => {
+    if (tripGroups.length === 1) return;
+    const newGroups = [...tripGroups];
+    newGroups.splice(index, 1);
+    setTripGroups(newGroups);
   };
 
-  const updateTripField = (index, field, value) => {
-    const newTrips = [...trips];
-    newTrips[index][field] = value;
-    setTrips(newTrips);
+  // TÉCNICOS (Por Grupo)
+  const updateTechnician = (groupIndex, techIndex, value) => {
+    const newGroups = [...tripGroups];
+    newGroups[groupIndex].technicians[techIndex] = value;
+    setTripGroups(newGroups);
+  };
+  const addTechnician = (groupIndex) => {
+    const newGroups = [...tripGroups];
+    newGroups[groupIndex].technicians.push('');
+    setTripGroups(newGroups);
+  };
+  const removeTechnician = (groupIndex, techIndex) => {
+    const newGroups = [...tripGroups];
+    newGroups[groupIndex].technicians.splice(techIndex, 1);
+    setTripGroups(newGroups);
   };
 
-  const updateTechnician = (tripIndex, techIndex, value) => {
-    const newTrips = [...trips];
-    newTrips[tripIndex].technicians[techIndex] = value;
-    setTrips(newTrips);
-  };
-  const addTechnician = (tripIndex) => {
-    const newTrips = [...trips];
-    newTrips[tripIndex].technicians.push('');
-    setTrips(newTrips);
-  };
-  const removeTechnician = (tripIndex, techIndex) => {
-    const newTrips = [...trips];
-    newTrips[tripIndex].technicians.splice(techIndex, 1);
-    setTrips(newTrips);
+  // TRANSPORTE (Por Grupo)
+  const updateTransport = (groupIndex, value) => {
+    const newGroups = [...tripGroups];
+    newGroups[groupIndex].transport = value;
+    setTripGroups(newGroups);
   };
 
-  const updateTask = (tripIndex, taskIndex, value) => {
-    const newTrips = [...trips];
-    newTrips[tripIndex].tasks[taskIndex] = value;
-    setTrips(newTrips);
-  };
-  const addTask = (tripIndex) => {
-    const newTrips = [...trips];
-    newTrips[tripIndex].tasks.push('');
-    setTrips(newTrips);
-  };
-  const removeTask = (tripIndex, taskIndex) => {
-    const newTrips = [...trips];
-    newTrips[tripIndex].tasks.splice(taskIndex, 1);
-    setTrips(newTrips);
+  // DESTINOS (Por Grupo)
+  const addDestination = (groupIndex) => {
+    const newGroups = [...tripGroups];
+    const newDest = createEmptyDestination();
+    newGroups[groupIndex].destinations.push(newDest);
+    newGroups[groupIndex].expandedDestinationId = newDest.id; // Auto-expand
+    setTripGroups(newGroups);
   };
 
+  const removeDestination = (groupIndex, destIndex) => {
+    const newGroups = [...tripGroups];
+    const group = newGroups[groupIndex];
+    
+    if (group.destinations.length === 1) return; // Mínimo 1 destino por grupo?
+    
+    const removedId = group.destinations[destIndex].id;
+    group.destinations.splice(destIndex, 1);
+    
+    if (removedId === group.expandedDestinationId) {
+        group.expandedDestinationId = group.destinations[Math.max(0, destIndex - 1)]?.id || null;
+    }
+    setTripGroups(newGroups);
+  };
+
+  const toggleDestination = (groupIndex, destId) => {
+    const newGroups = [...tripGroups];
+    const group = newGroups[groupIndex];
+    
+    if (group.expandedDestinationId === destId) {
+        group.expandedDestinationId = null;
+    } else {
+        group.expandedDestinationId = destId;
+    }
+    setTripGroups(newGroups);
+  };
+
+  const updateDestinationField = (groupIndex, destIndex, field, value) => {
+    const newGroups = [...tripGroups];
+    newGroups[groupIndex].destinations[destIndex][field] = value;
+    setTripGroups(newGroups);
+  };
+
+  // TAREFAS (Por Grupo -> Por Destino)
+  const updateTask = (groupIndex, destIndex, taskIndex, value) => {
+    const newGroups = [...tripGroups];
+    newGroups[groupIndex].destinations[destIndex].tasks[taskIndex] = value;
+    setTripGroups(newGroups);
+  };
+  const addTask = (groupIndex, destIndex) => {
+    const newGroups = [...tripGroups];
+    newGroups[groupIndex].destinations[destIndex].tasks.push('');
+    setTripGroups(newGroups);
+  };
+  const removeTask = (groupIndex, destIndex, taskIndex) => {
+    const newGroups = [...tripGroups];
+    newGroups[groupIndex].destinations[destIndex].tasks.splice(taskIndex, 1);
+    setTripGroups(newGroups);
+  };
+
+  // Helpers de Formatação
   const formatDateRange = (start, end) => {
     if (!start) return 'Data indefinida';
     const d1 = new Date(start);
@@ -244,8 +331,8 @@ export default function TravelEmail() {
     return `${day}/${month}`;
   };
 
-  const getDurationText = (trip) => {
-    const { startDate: start, endDate: end, returnSameDay } = trip;
+  const getDurationText = (dest) => {
+    const { startDate: start, endDate: end, returnSameDay } = dest;
     if (returnSameDay) return 'Volta no mesmo dia';
     if (!start || !end) return 'Duração indefinida';
     if (start === end) return 'Volta no mesmo dia';
@@ -295,7 +382,7 @@ export default function TravelEmail() {
             </div>
             
             <p className="modal-description">
-              Fale ou digite os detalhes da viagem. Ex: <i>"Vou com o Carlos para Itabirito dia 20 fazer preventiva na UPA, voltamos no mesmo dia."</i>
+              Fale ou digite os detalhes da viagem. Ex: <i>"Vou com o Carlos para Itabirito dia 20 e depois para Ouro Preto dia 22."</i>
             </p>
 
             <div className="input-container">
@@ -357,172 +444,232 @@ export default function TravelEmail() {
           </button>
         </div>
 
-        {trips.map((trip, tripIndex) => (
-          <div key={trip.id} className="trip-card">
-            <div className="trip-badge">
-              Viagem {tripIndex + 1}
-            </div>
-            
-            {trips.length > 1 && (
-              <button 
-                onClick={() => removeTrip(tripIndex)}
-                className="btn-remove-trip"
-                title="Remover Viagem"
-              >
-                <Trash2 size={18} />
-              </button>
-            )}
+        {/* LOOP DE GRUPOS DE VIAGEM */}
+        {tripGroups.map((group, groupIndex) => (
+            <div key={group.id} className="group-wrapper">
+                
+                <div className="group-header">
+                    <h3 className="group-title">
+                        <Layers size={18} /> Grupo / Equipe {groupIndex + 1}
+                    </h3>
+                    {tripGroups.length > 1 && (
+                        <button 
+                            onClick={() => removeTripGroup(groupIndex)}
+                            className="btn-remove-group"
+                            title="Remover Grupo"
+                        >
+                            <Trash2 size={16} /> Remover Grupo
+                        </button>
+                    )}
+                </div>
 
-            {/* SEÇÃO TÉCNICOS */}
-            <div className="field-group">
-              <label className="label">
-                <Users size={16}/> Técnicos
-              </label>
-              {trip.technicians.map((tech, i) => (
-                <div key={i} className="input-row">
-                  <input
-                    type="text"
-                    value={tech}
-                    onChange={(e) => updateTechnician(tripIndex, i, e.target.value)}
-                    placeholder="Nome do Técnico"
-                    className="input-field"
-                  />
-                  {trip.technicians.length > 1 && (
-                    <button onClick={() => removeTechnician(tripIndex, i)} className="btn-icon-only">
-                      <Trash2 size={18} />
+                {/* SEÇÃO TÉCNICOS DO GRUPO */}
+                <div className="global-section">
+                    <div className="field-group">
+                        <label className="label">
+                        <Users size={16}/> Técnicos (Equipe)
+                        </label>
+                        {group.technicians.map((tech, i) => (
+                        <div key={i} className="input-row">
+                            <input
+                            type="text"
+                            value={tech}
+                            onChange={(e) => updateTechnician(groupIndex, i, e.target.value)}
+                            placeholder="Nome do Técnico"
+                            className="input-field"
+                            />
+                            {group.technicians.length > 1 && (
+                            <button onClick={() => removeTechnician(groupIndex, i)} className="btn-icon-only">
+                                <Trash2 size={18} />
+                            </button>
+                            )}
+                        </div>
+                        ))}
+                        <button 
+                        onClick={() => addTechnician(groupIndex)}
+                        className="btn-add-text"
+                        >
+                        <Plus size={14} /> Adicionar Técnico
+                        </button>
+                    </div>
+                </div>
+
+                <hr className="divider" />
+
+                {/* LISTA DE DESTINOS (ACCORDION) */}
+                <div className="destinations-list">
+                    <label className="label mb-4">Destinos / Cidades</label>
+                    
+                    {group.destinations.map((dest, destIndex) => {
+                        const isExpanded = group.expandedDestinationId === dest.id;
+
+                        return (
+                            <div key={dest.id} className={`trip-card ${isExpanded ? 'expanded' : 'collapsed'}`}>
+                                {/* HEADER DO CARD (Clicável para expandir/retrair) */}
+                                <div 
+                                    className="trip-card-header" 
+                                    onClick={() => toggleDestination(groupIndex, dest.id)}
+                                >
+                                    <div className="trip-summary">
+                                        <span className="trip-number">#{destIndex + 1}</span>
+                                        <span className="trip-city">{dest.city || 'Nova Cidade'}</span>
+                                        <span className="trip-date">{formatDateRange(dest.startDate, dest.endDate)}</span>
+                                    </div>
+                                    <div className="trip-actions">
+                                        {group.destinations.length > 1 && (
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); removeDestination(groupIndex, destIndex); }}
+                                                className="btn-remove-trip-mini"
+                                                title="Remover Destino"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        )}
+                                        {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                    </div>
+                                </div>
+
+                                {/* CORPO DO CARD (Visível apenas se expandido) */}
+                                {isExpanded && (
+                                    <div className="trip-card-body">
+                                        {/* GRUPO 1: DESTINO E DATA */}
+                                        <div className="grid-2-col">
+                                        <div className="col-span-2">
+                                            <label className="label-sm">Cidade</label>
+                                            <div className="input-icon-wrapper">
+                                            <MapPin className="input-icon" size={16} />
+                                            <input
+                                                type="text"
+                                                value={dest.city}
+                                                onChange={(e) => updateDestinationField(groupIndex, destIndex, 'city', e.target.value)}
+                                                placeholder="Ex: IBERTIOGA"
+                                                className="input-no-border"
+                                            />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="label-sm">Ida</label>
+                                            <input
+                                            type="date"
+                                            value={dest.startDate}
+                                            onChange={(e) => updateDestinationField(groupIndex, destIndex, 'startDate', e.target.value)}
+                                            className="input-field"
+                                            style={{ width: '100%' }}
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="label-sm">Volta</label>
+                                            <input
+                                            type="date"
+                                            value={dest.endDate}
+                                            onChange={(e) => updateDestinationField(groupIndex, destIndex, 'endDate', e.target.value)}
+                                            className="input-field"
+                                            style={{ width: '100%' }}
+                                            />
+                                        </div>
+
+                                        {/* CHECKBOX VOLTA MESMO DIA */}
+                                        <div className="col-span-2 checkbox-wrapper">
+                                            <input 
+                                            type="checkbox" 
+                                            id={`returnSameDay-${group.id}-${dest.id}`}
+                                            checked={dest.returnSameDay}
+                                            onChange={(e) => updateDestinationField(groupIndex, destIndex, 'returnSameDay', e.target.checked)}
+                                            className="checkbox"
+                                            />
+                                            <label htmlFor={`returnSameDay-${group.id}-${dest.id}`} className="checkbox-label">
+                                            Retorna no mesmo dia
+                                            </label>
+                                        </div>
+
+                                        <div className="col-span-2">
+                                            <label className="label-sm">Tipo de Visita</label>
+                                            <select
+                                            value={dest.visitType}
+                                            onChange={(e) => updateDestinationField(groupIndex, destIndex, 'visitType', e.target.value)}
+                                            className="select-field"
+                                            >
+                                            <option value="PREVENTIVA">PREVENTIVA</option>
+                                            <option value="CORRETIVA">CORRETIVA</option>
+                                            <option value="PREVENTIVA + CORRETIVA">PREVENTIVA + CORRETIVA</option>
+                                            <option value="CEMIG">CEMIG</option>
+                                            <option value="INSTALAÇÃO">INSTALAÇÃO</option>
+                                            <option value="VISITA TÉCNICA">VISITA TÉCNICA</option>
+                                            <option value="OUTROS">OUTROS</option>
+                                            </select>
+                                        </div>
+                                        </div>
+
+                                        {/* GRUPO 2: LOCAIS / TAREFAS */}
+                                        <div className="field-group">
+                                        <label className="label">Locais e Tarefas</label>
+                                        {dest.tasks.map((task, i) => (
+                                            <div key={i} className="input-row">
+                                            <input
+                                                type="text"
+                                                value={task}
+                                                onChange={(e) => updateTask(groupIndex, destIndex, i, e.target.value)}
+                                                placeholder="Ex: Santa Casa - Entrega de material"
+                                                className="input-field"
+                                            />
+                                            {dest.tasks.length > 1 && (
+                                                <button onClick={() => removeTask(groupIndex, destIndex, i)} className="btn-icon-only">
+                                                <Trash2 size={18} />
+                                                </button>
+                                            )}
+                                            </div>
+                                        ))}
+                                        <button 
+                                            onClick={() => addTask(groupIndex, destIndex)}
+                                            className="btn-add-text"
+                                        >
+                                            <Plus size={14} /> Adicionar Local/Tarefa
+                                        </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+
+                    <button 
+                    onClick={() => addDestination(groupIndex)}
+                    className="btn-add-trip"
+                    >
+                    <Plus size={20} /> Adicionar Cidade/Destino
                     </button>
-                  )}
                 </div>
-              ))}
-              <button 
-                onClick={() => addTechnician(tripIndex)}
-                className="btn-add-text"
-              >
-                <Plus size={14} /> Adicionar Técnico
-              </button>
-            </div>
 
-            {/* GRUPO 1: DESTINO E DATA */}
-            <div className="grid-2-col">
-              <div className="col-span-2">
-                <label className="label-sm">Cidade de Destino</label>
-                <div className="input-icon-wrapper">
-                  <MapPin className="input-icon" size={16} />
-                  <input
-                    type="text"
-                    value={trip.city}
-                    onChange={(e) => updateTripField(tripIndex, 'city', e.target.value)}
-                    placeholder="Ex: IBERTIOGA"
-                    className="input-no-border"
-                  />
+                <hr className="divider" />
+
+                {/* SEÇÃO TRANSPORTE DO GRUPO */}
+                <div className="global-section">
+                    <label className="label">
+                        <Truck size={16}/> Deslocamento/Transporte
+                    </label>
+                    <select
+                        value={group.transport}
+                        onChange={(e) => updateTransport(groupIndex, e.target.value)}
+                        className="select-field"
+                    >
+                        <option value="VEÍCULO PARTICULAR">VEÍCULO PARTICULAR</option>
+                        <option value="VEÍCULO DA EMPRESA">VEÍCULO DA EMPRESA</option>
+                        <option value="ÔNIBUS">ÔNIBUS</option>
+                    </select>
                 </div>
-              </div>
-
-              <div>
-                <label className="label-sm">Ida</label>
-                <input
-                  type="date"
-                  value={trip.startDate}
-                  onChange={(e) => updateTripField(tripIndex, 'startDate', e.target.value)}
-                  className="input-field"
-                  style={{ width: '100%' }}
-                />
-              </div>
-
-              <div>
-                <label className="label-sm">Volta</label>
-                <input
-                  type="date"
-                  value={trip.endDate}
-                  onChange={(e) => updateTripField(tripIndex, 'endDate', e.target.value)}
-                  className="input-field"
-                  style={{ width: '100%' }}
-                />
-              </div>
-
-              {/* CHECKBOX VOLTA MESMO DIA */}
-              <div className="col-span-2 checkbox-wrapper">
-                <input 
-                  type="checkbox" 
-                  id={`returnSameDay-${trip.id}`}
-                  checked={trip.returnSameDay}
-                  onChange={(e) => updateTripField(tripIndex, 'returnSameDay', e.target.checked)}
-                  className="checkbox"
-                />
-                <label htmlFor={`returnSameDay-${trip.id}`} className="checkbox-label">
-                   Retorna no mesmo dia
-                </label>
-              </div>
-
-              <div className="col-span-2">
-                <label className="label-sm">Tipo de Visita</label>
-                <select
-                  value={trip.visitType}
-                  onChange={(e) => updateTripField(tripIndex, 'visitType', e.target.value)}
-                  className="select-field"
-                >
-                  <option value="PREVENTIVA">PREVENTIVA</option>
-                  <option value="CORRETIVA">CORRETIVA</option>
-                  <option value="PREVENTIVA + CORRETIVA">PREVENTIVA + CORRETIVA</option>
-                  <option value="CEMIG">CEMIG</option>
-                  <option value="INSTALAÇÃO">INSTALAÇÃO</option>
-                  <option value="VISITA TÉCNICA">VISITA TÉCNICA</option>
-                  <option value="OUTROS">OUTROS</option>
-                </select>
-              </div>
             </div>
-
-            {/* GRUPO 2: LOCAIS / TAREFAS */}
-            <div className="field-group">
-              <label className="label">Locais e Tarefas</label>
-              {trip.tasks.map((task, i) => (
-                <div key={i} className="input-row">
-                  <input
-                    type="text"
-                    value={task}
-                    onChange={(e) => updateTask(tripIndex, i, e.target.value)}
-                    placeholder="Ex: Santa Casa - Entrega de material"
-                    className="input-field"
-                  />
-                  {trip.tasks.length > 1 && (
-                    <button onClick={() => removeTask(tripIndex, i)} className="btn-icon-only">
-                      <Trash2 size={18} />
-                    </button>
-                  )}
-                </div>
-              ))}
-              <button 
-                onClick={() => addTask(tripIndex)}
-                className="btn-add-text"
-              >
-                <Plus size={14} /> Adicionar Local/Tarefa
-              </button>
-            </div>
-
-            {/* GRUPO 3: TRANSPORTE */}
-            <div>
-              <label className="label">
-                <Truck size={16}/> Deslocamento/Transporte
-              </label>
-              <select
-                value={trip.transport}
-                onChange={(e) => updateTripField(tripIndex, 'transport', e.target.value)}
-                className="select-field"
-              >
-                <option value="VEÍCULO PARTICULAR">VEÍCULO PARTICULAR</option>
-                <option value="VEÍCULO DA EMPRESA">VEÍCULO DA EMPRESA</option>
-                <option value="ÔNIBUS">ÔNIBUS</option>
-              </select>
-            </div>
-          </div>
         ))}
 
+        {/* BOTÃO PARA ADICIONAR NOVO GRUPO */}
         <button 
-          onClick={addTrip}
-          className="btn-add-trip"
+            onClick={addTripGroup}
+            className="btn-add-group"
         >
-          <Plus size={20} /> Adicionar Outra Viagem
+            <Plus size={20} /> Adicionar Outra Equipe/Viagem
         </button>
+
       </div>
 
       {/* COLUNA DIREITA: PREVIEW E AÇÃO */}
@@ -551,7 +698,7 @@ export default function TravelEmail() {
              <div className="subject-row">
                 <button 
                   onClick={generateEmailSubject}
-                  disabled={isGeneratingSubject || trips.length === 0}
+                  disabled={isGeneratingSubject || tripGroups.length === 0}
                   className="btn-generate-subject"
                 >
                   {isGeneratingSubject ? <Loader2 className="animate-spin" size={14} /> : <Sparkles size={14} />} 
@@ -578,71 +725,78 @@ export default function TravelEmail() {
           className="preview-content" 
           ref={previewRef}
         >
-          {trips.map((trip, index) => (
-            <div key={trip.id} style={{ marginBottom: '24px', fontFamily: 'Arial, sans-serif', color: '#000' }}>
-              
-              {/* HEADER: NOMES */}
-              <div style={{ 
-                color: '#1e40af', // Blue-800
-                fontWeight: 'bold', 
-                fontSize: '18px', 
-                marginBottom: '4px',
-                wordBreak: 'break-word'
-              }}>
-                {formatTechnicians(trip.technicians)}
-              </div>
+            <div style={{ fontFamily: 'Arial, sans-serif', color: '#000' }}>
+                
+                {tripGroups.map((group, gIndex) => (
+                    <div key={group.id} style={{ marginBottom: '32px' }}>
+                        {/* HEADER: NOMES (DO GRUPO) */}
+                        <div style={{ 
+                            color: '#1e40af', // Blue-800
+                            fontWeight: 'bold', 
+                            fontSize: '18px', 
+                            marginBottom: '16px',
+                            wordBreak: 'break-word'
+                        }}>
+                            {formatTechnicians(group.technicians)}
+                        </div>
 
-              {/* LINHA 1: CIDADE - DATA - TIPO - PERNOITE */}
-              <div style={{ fontSize: '14px', lineHeight: '1.5', marginBottom: '4px', wordBreak: 'break-word' }}>
-                <strong style={{ textTransform: 'uppercase' }}>{trip.city || 'CIDADE'}</strong>
-                {' - '}
-                {formatDateRange(trip.startDate, trip.endDate)}
-                {' - '}
-                {trip.visitType}
-                {' - '}
-                <strong>{getDurationText(trip)}</strong>
-              </div>
+                        {/* LOOP DE DESTINOS DO GRUPO */}
+                        {group.destinations.map((dest, index) => (
+                            <div key={dest.id} style={{ marginBottom: '16px' }}>
+                                {/* LINHA 1: CIDADE - DATA - TIPO - PERNOITE */}
+                                <div style={{ fontSize: '14px', lineHeight: '1.5', marginBottom: '4px', wordBreak: 'break-word' }}>
+                                    <strong style={{ textTransform: 'uppercase' }}>{dest.city || 'CIDADE'}</strong>
+                                    {' - '}
+                                    {formatDateRange(dest.startDate, dest.endDate)}
+                                    {' - '}
+                                    {dest.visitType}
+                                    {' - '}
+                                    <strong>{getDurationText(dest)}</strong>
+                                </div>
 
-              {/* LINHA 2+: TAREFAS */}
-              <div style={{ fontSize: '14px', lineHeight: '1.4', marginBottom: '8px', wordBreak: 'break-word' }}>
-                {trip.tasks.filter(t => t).map((task, tIndex) => (
-                  <div key={tIndex}>- {task}</div>
+                                {/* LINHA 2+: TAREFAS */}
+                                <div style={{ fontSize: '14px', lineHeight: '1.4', marginBottom: '8px', wordBreak: 'break-word' }}>
+                                    {dest.tasks.filter(t => t).map((task, tIndex) => (
+                                    <div key={tIndex}>- {task}</div>
+                                    ))}
+                                    {dest.tasks.filter(t => t).length === 0 && (
+                                    <div style={{ color: '#999', fontStyle: 'italic' }}>- Nenhuma tarefa descrita</div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+
+                        {/* FOOTER: DESLOCAMENTO BOX (DO GRUPO) */}
+                        <table style={{ borderCollapse: 'collapse', fontSize: '12px', border: '1px solid #9ca3af', marginTop: '12px', width: 'auto' }}>
+                            <tbody>
+                            <tr>
+                                <td style={{ 
+                                fontWeight: 'bold', 
+                                padding: '4px 8px', 
+                                borderRight: '1px solid #9ca3af',
+                                whiteSpace: 'nowrap',
+                                backgroundColor: '#f9fafb'
+                                }}>
+                                DESLOCAMENTO
+                                </td>
+                                <td style={{ 
+                                padding: '4px 8px',
+                                textTransform: 'uppercase',
+                                wordBreak: 'break-word'
+                                }}>
+                                {group.transport}
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+
+                        {/* SEPARADOR ENTRE GRUPOS (Se não for o último) */}
+                        {gIndex < tripGroups.length - 1 && (
+                             <hr style={{ margin: '32px 0', border: 'none', borderTop: '2px solid #e5e7eb' }} />
+                        )}
+                    </div>
                 ))}
-                {trip.tasks.filter(t => t).length === 0 && (
-                   <div style={{ color: '#999', fontStyle: 'italic' }}>- Nenhuma tarefa descrita</div>
-                )}
-              </div>
-
-              {/* FOOTER: DESLOCAMENTO BOX */}
-              <table style={{ borderCollapse: 'collapse', fontSize: '12px', border: '1px solid #9ca3af', marginTop: '4px', width: 'auto' }}>
-                <tbody>
-                  <tr>
-                    <td style={{ 
-                      fontWeight: 'bold', 
-                      padding: '4px 8px', 
-                      borderRight: '1px solid #9ca3af',
-                      whiteSpace: 'nowrap',
-                      backgroundColor: '#f9fafb'
-                    }}>
-                      DESLOCAMENTO
-                    </td>
-                    <td style={{ 
-                      padding: '4px 8px',
-                      textTransform: 'uppercase',
-                      wordBreak: 'break-word'
-                    }}>
-                      {trip.transport}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-
-              {/* Separador visual apenas se houver mais de uma viagem e não for a última */}
-              {index < trips.length - 1 && (
-                <hr style={{ margin: '20px 0', border: 'none', borderTop: '1px dashed #ccc' }} />
-              )}
             </div>
-          ))}
         </div>
 
       </div>
