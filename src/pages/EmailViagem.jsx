@@ -29,6 +29,10 @@ export default function TravelEmail() {
 
   const previewRef = useRef(null);
 
+  // Estados para Adicionar Técnico (Novo Fluxo)
+  const [addingTechState, setAddingTechState] = useState({}); // { groupIndex: boolean }
+  const [tempTechInput, setTempTechInput] = useState({}); // { groupIndex: string }
+
   // Inicializa o primeiro destino do primeiro grupo como expandido
   useEffect(() => {
     if (tripGroups.length > 0 && tripGroups[0].destinations.length > 0 && tripGroups[0].expandedDestinationId === null) {
@@ -53,7 +57,7 @@ export default function TravelEmail() {
   function createEmptyTripGroup() {
     return {
         id: Date.now() + Math.random(),
-        technicians: [''],
+        technicians: [],
         transport: 'VEÍCULO DA EMPRESA',
         destinations: [createEmptyDestination()],
         expandedDestinationId: null
@@ -235,17 +239,29 @@ export default function TravelEmail() {
     setTripGroups(newGroups);
   };
 
-  // TÉCNICOS (Por Grupo)
-  const updateTechnician = (groupIndex, techIndex, value) => {
-    const newGroups = [...tripGroups];
-    newGroups[groupIndex].technicians[techIndex] = value;
-    setTripGroups(newGroups);
+  // TÉCNICOS (Por Grupo) - NEW HELPERS
+  const startAddingTechnician = (groupIndex) => {
+    setAddingTechState({ ...addingTechState, [groupIndex]: true });
+    setTempTechInput({ ...tempTechInput, [groupIndex]: '' });
   };
-  const addTechnician = (groupIndex) => {
+
+  const confirmAddTechnician = (groupIndex) => {
+    const name = tempTechInput[groupIndex];
+    if (!name || !name.trim()) return;
+
     const newGroups = [...tripGroups];
-    newGroups[groupIndex].technicians.push('');
+    newGroups[groupIndex].technicians.push(name.trim());
     setTripGroups(newGroups);
+
+    setTempTechInput({ ...tempTechInput, [groupIndex]: '' });
+    setAddingTechState({ ...addingTechState, [groupIndex]: false });
   };
+
+  const cancelAddTechnician = (groupIndex) => {
+    setTempTechInput({ ...tempTechInput, [groupIndex]: '' });
+    setAddingTechState({ ...addingTechState, [groupIndex]: false });
+  };
+
   const removeTechnician = (groupIndex, techIndex) => {
     const newGroups = [...tripGroups];
     newGroups[groupIndex].technicians.splice(techIndex, 1);
@@ -443,59 +459,77 @@ export default function TravelEmail() {
           </h1>
           <button 
             onClick={() => setIsImportModalOpen(true)}
-            className="btn-import"
+            className="btn-secondary"
           >
-            <Mic size={14} /> <Sparkles size={14} /> Importar (Voz/IA)
+            <Sparkles size={16} /> Importar com IA
           </button>
         </div>
 
-        {/* LOOP DE GRUPOS DE VIAGEM */}
+        {/* LISTA DE GRUPOS DE VIAGEM */}
         {tripGroups.map((group, groupIndex) => (
-            <div key={group.id} className="group-wrapper">
+            <div key={group.id} className="trip-group-card">
                 
                 <div className="group-header">
                     <h3 className="group-title">
-                        <Layers size={18} /> Grupo / Equipe {groupIndex + 1}
+                        <Layers size={18} /> Equipe {groupIndex + 1}
                     </h3>
                     {tripGroups.length > 1 && (
                         <button 
                             onClick={() => removeTripGroup(groupIndex)}
                             className="btn-remove-group"
-                            title="Remover Grupo"
                         >
                             <Trash2 size={16} /> Remover Grupo
                         </button>
                     )}
                 </div>
 
-                {/* SEÇÃO TÉCNICOS DO GRUPO */}
+                {/* SEÇÃO TÉCNICOS DO GRUPO (NEW JSX) */}
                 <div className="global-section">
                     <div className="field-group">
                         <label className="label">
                         <Users size={16}/> Técnicos (Equipe)
                         </label>
-                        {group.technicians.map((tech, i) => (
-                        <div key={i} className="input-row">
-                            <input
-                            type="text"
-                            value={tech}
-                            onChange={(e) => updateTechnician(groupIndex, i, e.target.value)}
-                            placeholder="Nome do Técnico"
-                            className="input-field"
-                            />
-                            {group.technicians.length > 1 && (
-                            <button onClick={() => removeTechnician(groupIndex, i)} className="btn-icon-only">
-                                <Trash2 size={18} />
-                            </button>
-                            )}
+                        
+                        {/* LISTA DE TÉCNICOS JÁ ADICIONADOS (INLINE) */}
+                        <div className="technicians-list">
+                            {group.technicians.map((tech, i) => (
+                                <div key={i} className="tech-badge">
+                                    <span>{tech}</span>
+                                    <button onClick={() => removeTechnician(groupIndex, i)} className="btn-remove-tech" title="Remover">
+                                        <X size={14} />
+                                    </button>
+                                </div>
+                            ))}
                         </div>
-                        ))}
-                        <button 
-                        onClick={() => addTechnician(groupIndex)}
-                        className="btn-add-text"
-                        >
-                        <Plus size={14} /> Adicionar Técnico
-                        </button>
+
+                        {/* ÁREA DE ADICIONAR TÉCNICO */}
+                        {addingTechState[groupIndex] ? (
+                            <div className="add-tech-container">
+                                <input
+                                    type="text"
+                                    value={tempTechInput[groupIndex] || ''}
+                                    onChange={(e) => setTempTechInput({...tempTechInput, [groupIndex]: e.target.value})}
+                                    placeholder="Nome do Técnico"
+                                    className="input-field"
+                                    autoFocus
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') confirmAddTechnician(groupIndex);
+                                        if (e.key === 'Escape') cancelAddTechnician(groupIndex);
+                                    }}
+                                />
+                                <div className="add-tech-actions">
+                                    <button onClick={() => confirmAddTechnician(groupIndex)} className="btn-confirm-tech">Confirmar</button>
+                                    <button onClick={() => cancelAddTechnician(groupIndex)} className="btn-cancel-tech">Cancelar</button>
+                                </div>
+                            </div>
+                        ) : (
+                            <button 
+                                onClick={() => startAddingTechnician(groupIndex)}
+                                className="btn-add-tech-green"
+                            >
+                                <Plus size={14} /> Adicionar Técnico
+                            </button>
+                        )}
                     </div>
                 </div>
 
