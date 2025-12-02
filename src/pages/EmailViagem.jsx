@@ -1,6 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Plus, Trash2, Copy, Users, Briefcase, Sparkles, X, Loader2, Mic, MicOff, MapPin, Truck, ChevronDown, ChevronUp, Layers } from 'lucide-react';
 import './EmailViagem.css';
+import DatePicker, { registerLocale } from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { ptBR } from 'date-fns/locale';
+
+registerLocale('pt-BR', ptBR);
 
 // --- CONFIGURAÇÃO DA API GEMINI ---
 const apiKey = ""; // A chave será injetada automaticamente pelo ambiente
@@ -548,26 +553,26 @@ export default function TravelEmail() {
                                             </div>
                                         </div>
 
-                                        <div>
-                                            <label className="label-sm">Ida</label>
-                                            <input
-                                            type="date"
-                                            value={dest.startDate}
-                                            onChange={(e) => updateDestinationField(groupIndex, destIndex, 'startDate', e.target.value)}
-                                            className="input-field"
-                                            style={{ width: '100%' }}
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="label-sm">Volta</label>
-                                            <input
-                                            type="date"
-                                            value={dest.endDate}
-                                            onChange={(e) => updateDestinationField(groupIndex, destIndex, 'endDate', e.target.value)}
-                                            className="input-field"
-                                            style={{ width: '100%' }}
-                                            />
+                                        <div className="col-span-2">
+                                            <label className="label-sm">Período (Ida e Volta)</label>
+                                            <div className="date-picker-wrapper">
+                                                <DatePicker
+                                                    selectsRange={true}
+                                                    startDate={dest.startDate ? new Date(dest.startDate) : null}
+                                                    endDate={dest.endDate ? new Date(dest.endDate) : null}
+                                                    onChange={(update) => {
+                                                        const [start, end] = update;
+                                                        updateDestinationField(groupIndex, destIndex, 'startDate', start ? start.toISOString() : '');
+                                                        updateDestinationField(groupIndex, destIndex, 'endDate', end ? end.toISOString() : '');
+                                                    }}
+                                                    dateFormat="dd/MM/yyyy"
+                                                    locale="pt-BR"
+                                                    placeholderText="Selecione a data de ida e volta"
+                                                    className="input-field w-full"
+                                                    isClearable={true}
+                                                    wrapperClassName="w-full"
+                                                />
+                                            </div>
                                         </div>
 
                                         {/* CHECKBOX VOLTA MESMO DIA */}

@@ -965,3 +965,13 @@
         max-height: 1000px;
     }
 }
+/* Date Picker Overrides */
+.date-picker-wrapper {
+    width: 100%;
+}
+.date-picker-wrapper .react-datepicker-wrapper {
+    width: 100%;
+}
+.w-full {
+    width: 100%;
+}
