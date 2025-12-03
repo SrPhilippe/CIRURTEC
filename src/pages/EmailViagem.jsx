@@ -32,6 +32,12 @@ export default function TravelEmail() {
   // Estados para Adicionar Técnico (Novo Fluxo)
   const [addingTechState, setAddingTechState] = useState({}); // { groupIndex: boolean }
   const [tempTechInput, setTempTechInput] = useState({}); // { groupIndex: string }
+  const [notification, setNotification] = useState(null); // { message, type: 'success' | 'info' }
+
+  const showNotification = (message, type = 'success') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3000);
+  };
 
   // Inicializa o primeiro destino do primeiro grupo como expandido
   useEffect(() => {
@@ -58,14 +64,13 @@ export default function TravelEmail() {
 
   const saveDraft = () => {
     localStorage.setItem('travelEmailDraft', JSON.stringify(tripGroups));
-    alert("Rascunho salvo com sucesso!");
+    showNotification("Rascunho salvo com sucesso!", "success");
   };
 
   const clearDraft = () => {
-    if (window.confirm("Tem certeza que deseja limpar tudo?")) {
-        localStorage.removeItem('travelEmailDraft');
-        setTripGroups([createEmptyTripGroup()]);
-    }
+    localStorage.removeItem('travelEmailDraft');
+    setTripGroups([createEmptyTripGroup()]);
+    showNotification("Rascunho limpo e reiniciado!", "info");
   };
 
 
@@ -416,6 +421,14 @@ export default function TravelEmail() {
   return (
     <div className="travel-email-wrapper">
       
+      {/* NOTIFICATION TOAST */}
+      {notification && (
+        <div className={`notification-toast notification-${notification.type}`}>
+            {notification.type === 'success' ? <Sparkles size={16} /> : <Briefcase size={16} />}
+            {notification.message}
+        </div>
+      )}
+
       {/* MODAL DE IMPORTAÇÃO COM IA + VOZ */}
       {isImportModalOpen && (
         <div className="modal-overlay">
