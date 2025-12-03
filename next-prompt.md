@@ -1,0 +1,1 @@
+Remova o diálogo "window.alert" que é exibido quando o usuário clica em limpar ou salvar rascunho. Não é necessário.

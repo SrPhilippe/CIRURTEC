@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Trash2, Copy, Users, Briefcase, Sparkles, X, Loader2, Mic, MicOff, MapPin, Truck, ChevronDown, ChevronUp, Layers } from 'lucide-react';
+import { Plus, Trash2, Copy, Users, Briefcase, Sparkles, X, Loader2, Mic, MicOff, MapPin, Truck, ChevronDown, ChevronUp, Layers, Save, RotateCcw } from 'lucide-react';
 import './EmailViagem.css';
 import DatePicker, { registerLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -35,12 +35,39 @@ export default function TravelEmail() {
 
   // Inicializa o primeiro destino do primeiro grupo como expandido
   useEffect(() => {
+    // Tenta carregar do localStorage
+    const savedData = localStorage.getItem('travelEmailDraft');
+    if (savedData) {
+        try {
+            const parsedData = JSON.parse(savedData);
+            if (Array.isArray(parsedData) && parsedData.length > 0) {
+                setTripGroups(parsedData);
+                return;
+            }
+        } catch (e) {
+            console.error("Erro ao carregar rascunho:", e);
+        }
+    }
+
     if (tripGroups.length > 0 && tripGroups[0].destinations.length > 0 && tripGroups[0].expandedDestinationId === null) {
         const newGroups = [...tripGroups];
         newGroups[0].expandedDestinationId = newGroups[0].destinations[0].id;
         setTripGroups(newGroups);
     }
   }, []);
+
+  const saveDraft = () => {
+    localStorage.setItem('travelEmailDraft', JSON.stringify(tripGroups));
+    alert("Rascunho salvo com sucesso!");
+  };
+
+  const clearDraft = () => {
+    if (window.confirm("Tem certeza que deseja limpar tudo?")) {
+        localStorage.removeItem('travelEmailDraft');
+        setTripGroups([createEmptyTripGroup()]);
+    }
+  };
+
 
   function createEmptyDestination() {
     return {
@@ -839,6 +866,26 @@ export default function TravelEmail() {
         </div>
 
       </div>
+
+      {/* FLOATING ACTION BUTTONS */}
+      <div className="floating-actions">
+        <button 
+            onClick={clearDraft}
+            className="btn-float-clear"
+            title="Limpar e Reiniciar"
+        >
+            <RotateCcw size={24} />
+        </button>
+        <button 
+            onClick={saveDraft}
+            className="btn-float-save"
+            title="Salvar Rascunho"
+        >
+            <Save size={20} />
+            <span>Salvar Rascunho</span>
+        </button>
+      </div>
     </div>
   );
 }
+
