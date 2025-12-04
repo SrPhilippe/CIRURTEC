@@ -813,7 +813,7 @@ export default function TravelEmail() {
                             color: '#1e40af', // Blue-800
                             fontWeight: 'bold', 
                             fontSize: '18px', 
-                            marginBottom: '16px',
+                            marginBottom: '8px',
                             wordBreak: 'break-word'
                         }}>
                             {formatTechnicians(group.technicians)}
@@ -821,9 +821,9 @@ export default function TravelEmail() {
 
                         {/* LOOP DE DESTINOS DO GRUPO */}
                         {group.destinations.map((dest, index) => (
-                            <div key={dest.id} style={{ marginBottom: '16px' }}>
+                            <div key={dest.id} style={{ marginBottom: '8px' }}>
                                 {/* LINHA 1: CIDADE - DATA - TIPO - PERNOITE */}
-                                <div style={{ fontSize: '14px', lineHeight: '1.5', marginBottom: '4px', wordBreak: 'break-word' }}>
+                                <div style={{ fontSize: '14px', lineHeight: '1.5', marginBottom: '2px', wordBreak: 'break-word' }}>
                                     <strong style={{ textTransform: 'uppercase' }}>{dest.city || 'CIDADE'}</strong>
                                     {' - '}
                                     {formatDateRange(dest.startDate, dest.endDate)}
@@ -834,7 +834,7 @@ export default function TravelEmail() {
                                 </div>
 
                                 {/* LINHA 2+: TAREFAS */}
-                                <div style={{ fontSize: '14px', lineHeight: '1.4', marginBottom: '8px', wordBreak: 'break-word' }}>
+                                <div style={{ fontSize: '14px', lineHeight: '1.4', marginBottom: '4px', wordBreak: 'break-word' }}>
                                     {dest.tasks.filter(t => t).map((task, tIndex) => (
                                     <div key={tIndex}>- {task}</div>
                                     ))}
