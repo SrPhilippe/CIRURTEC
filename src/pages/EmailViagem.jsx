@@ -281,8 +281,10 @@ export default function TravelEmail() {
     const name = tempTechInput[groupIndex];
     if (!name || !name.trim()) return;
 
+    const formattedName = name.trim().toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+
     const newGroups = [...tripGroups];
-    newGroups[groupIndex].technicians.push(name.trim());
+    newGroups[groupIndex].technicians.push(formattedName);
     setTripGroups(newGroups);
 
     setTempTechInput({ ...tempTechInput, [groupIndex]: '' });
@@ -398,9 +400,12 @@ export default function TravelEmail() {
   };
 
   const formatTechnicians = (techs) => {
-    const validTechs = techs.filter(t => t.trim() !== '');
+    const capitalize = (s) => s.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    const validTechs = techs.filter(t => t.trim() !== '').map(capitalize);
+    
     if (validTechs.length === 0) return 'Técnicos não informados';
     if (validTechs.length === 1) return validTechs[0];
+    
     const last = validTechs[validTechs.length - 1];
     const rest = validTechs.slice(0, -1).join(', ');
     return `${rest} e ${last}`;
@@ -620,7 +625,7 @@ export default function TravelEmail() {
                                             <input
                                                 type="text"
                                                 value={dest.city}
-                                                onChange={(e) => updateDestinationField(groupIndex, destIndex, 'city', e.target.value)}
+                                                onChange={(e) => updateDestinationField(groupIndex, destIndex, 'city', e.target.value.toUpperCase())}
                                                 placeholder="Ex: IBERTIOGA"
                                                 className="input-no-border"
                                             />
