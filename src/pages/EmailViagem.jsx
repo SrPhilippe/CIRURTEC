@@ -29,6 +29,72 @@ export default function TravelEmail() {
 
   const previewRef = useRef(null);
 
+  // --- CITY AUTOCOMPLETE STATE ---
+  const allCitiesRef = useRef([]); // Stores all fetched cities
+  const [citySearchResults, setCitySearchResults] = useState([]); // Stores filtered cities
+  const [activeCityField, setActiveCityField] = useState(null); // { groupIndex, destIndex }
+  const wrapperRef = useRef(null); // To detect clicks outside
+
+  // --- FETCH CITIES FROM IBGE (ON MOUNT) ---
+  useEffect(() => {
+    fetch('https://servicodados.ibge.gov.br/api/v1/localidades/municipios')
+      .then(response => response.json())
+      .then(data => {
+        // Map to simpler structure: { id, nome, uf }
+        const mapped = data.map(city => ({
+          id: city.id,
+          nome: city.nome,
+          uf: city.microrregiao?.mesorregiao?.UF?.sigla || city['regiao-imediata']?.['regiao-intermediaria']?.UF?.sigla || ''
+        }));
+        console.log(`Cidades carregadas: ${mapped.length}`); // DEBUG
+        allCitiesRef.current = mapped;
+      })
+      .catch(err => console.error("Erro ao buscar cidades:", err));
+      
+    // Handle click outside to close dropdown
+    function handleClickOutside(event) {
+        if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+            setActiveCityField(null);
+        }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleCityChange = (groupIndex, destIndex, value) => {
+    // 1. Update the value (Uppercase)
+    const upperValue = value.toUpperCase();
+    updateDestinationField(groupIndex, destIndex, 'city', upperValue);
+    
+    // 2. Filter Cities if >= 2 chars
+    if (value.length >= 2) {
+        const searchNorm = value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        
+        const filtered = allCitiesRef.current.filter(city => {
+            const cityNorm = city.nome.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            return cityNorm.includes(searchNorm);
+        });
+
+        // 3. Sort: MG first, then alphabetical
+        filtered.sort((a, b) => {
+            if (a.uf === 'MG' && b.uf !== 'MG') return -1;
+            if (a.uf !== 'MG' && b.uf === 'MG') return 1;
+            return a.nome.localeCompare(b.nome);
+        });
+
+        setCitySearchResults(filtered.slice(0, 10)); // Limit to 10 results
+        setActiveCityField({ groupIndex, destIndex });
+    } else {
+        setCitySearchResults([]);
+        setActiveCityField(null);
+    }
+  };
+
+  const selectCity = (groupIndex, destIndex, city) => {
+      updateDestinationField(groupIndex, destIndex, 'city', city.nome.toUpperCase());
+      setActiveCityField(null);
+  };
+
   // Estados para Adicionar Técnico (Novo Fluxo)
   const [addingTechState, setAddingTechState] = useState({}); // { groupIndex: boolean }
   const [tempTechInput, setTempTechInput] = useState({}); // { groupIndex: string }
@@ -620,15 +686,35 @@ export default function TravelEmail() {
                                         <div className="grid-2-col">
                                         <div className="col-span-2">
                                             <label className="label-sm">Cidade</label>
-                                            <div className="input-icon-wrapper">
+                                            <div className="input-icon-wrapper" ref={activeCityField?.groupIndex === groupIndex && activeCityField?.destIndex === destIndex ? wrapperRef : null}>
                                             <MapPin className="input-icon" size={16} />
                                             <input
                                                 type="text"
                                                 value={dest.city}
-                                                onChange={(e) => updateDestinationField(groupIndex, destIndex, 'city', e.target.value.toUpperCase())}
+                                                onChange={(e) => handleCityChange(groupIndex, destIndex, e.target.value)}
+                                                onFocus={(e) => { 
+                                                    if(e.target.value.length >= 2) handleCityChange(groupIndex, destIndex, e.target.value); 
+                                                }}
                                                 placeholder="Ex: IBERTIOGA"
                                                 className="input-no-border"
+                                                autoComplete="off"
                                             />
+                                            
+                                            {/* DROPDOWN MENU */}
+                                            {activeCityField?.groupIndex === groupIndex && activeCityField?.destIndex === destIndex && citySearchResults.length > 0 && (
+                                                <ul className="city-dropdown">
+                                                    {citySearchResults.map((city) => (
+                                                        <li 
+                                                            key={city.id} 
+                                                            className="city-dropdown-item"
+                                                            onClick={() => selectCity(groupIndex, destIndex, city)}
+                                                        >
+                                                            <span className="city-name">{city.nome}</span>
+                                                            <span className="city-uf">{city.uf}</span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            )}
                                             </div>
                                         </div>
 
