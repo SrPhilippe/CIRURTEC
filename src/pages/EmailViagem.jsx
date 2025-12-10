@@ -7,8 +7,11 @@ import { ptBR } from 'date-fns/locale';
 
 registerLocale('pt-BR', ptBR);
 
+import { fetchCities } from '../services/ibgeService';
+import { analyzeTripText, generateSubject } from '../services/geminiService';
+
 // --- CONFIGURAÇÃO DA API GEMINI ---
-const apiKey = ""; // A chave será injetada automaticamente pelo ambiente
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY || ""; // A chave será injetada automaticamente pelo ambiente
 
 export default function TravelEmail() {
   // --- ESTADO PRINCIPAL: GRUPOS DE VIAGEM ---
@@ -37,15 +40,8 @@ export default function TravelEmail() {
 
   // --- FETCH CITIES FROM IBGE (ON MOUNT) ---
   useEffect(() => {
-    fetch('https://servicodados.ibge.gov.br/api/v1/localidades/municipios')
-      .then(response => response.json())
-      .then(data => {
-        // Map to simpler structure: { id, nome, uf }
-        const mapped = data.map(city => ({
-          id: city.id,
-          nome: city.nome,
-          uf: city.microrregiao?.mesorregiao?.UF?.sigla || city['regiao-imediata']?.['regiao-intermediaria']?.UF?.sigla || ''
-        }));
+    fetchCities()
+      .then(mapped => {
         console.log(`Cidades carregadas: ${mapped.length}`); // DEBUG
         allCitiesRef.current = mapped;
       })
@@ -211,6 +207,27 @@ export default function TravelEmail() {
 
   // --- FUNÇÕES DA IA (GEMINI) ---
 
+  /* 
+   * Helper para converter DD-MM-YYYY para ISO string (para o DatePIcker)
+   * Ex: "25-12-2023" -> "2023-12-25T00:00:00.000Z"
+   */
+  const parseDateToISO = (dateStr) => {
+    if (!dateStr) return '';
+    try {
+        const parts = dateStr.split('-'); // DD-MM-YYYY
+        if (parts.length === 3) {
+            // new Date(year, monthIndex, day)
+            // Month is 0-indexed in JS Date
+            const dt = new Date(parts[2], parseInt(parts[1]) - 1, parts[0]);
+            return dt.toISOString();
+        }
+        return '';
+    } catch (e) {
+        console.warn("Falha ao tratar data:", dateStr, e);
+        return '';
+    }
+  };
+
   const handleSmartImport = async () => {
     if (!importText.trim()) return;
     setIsAnalyzing(true);
@@ -219,40 +236,9 @@ export default function TravelEmail() {
         setIsListening(false);
     }
 
-    const prompt = `
-      Analise o texto abaixo, que descreve uma viagem de trabalho, e extraia os dados para formato JSON.
-      
-      Texto: "${importText}"
-      
-      Regras de extração:
-      1. technicians: Lista de nomes de pessoas citadas.
-      2. destinations: Lista de objetos contendo:
-         - city: Cidade de destino.
-         - startDate: Data de ida no formato YYYY-MM-DD. Assuma o ano corrente se não citado.
-         - endDate: Data de volta no formato YYYY-MM-DD. Se for voltar no mesmo dia, igual à startDate.
-         - visitType: Escolha ESTRITAMENTE um destes: "PREVENTIVA", "CORRETIVA", "PREVENTIVA + CORRETIVA", "CEMIG", "INSTALAÇÃO", "VISITA TÉCNICA", "OUTROS". Se não estiver claro, use "OUTROS".
-         - tasks: Lista de locais e o que será feito (ex: "Santa Casa - Troca de Switch"). Melhore o texto para soar profissional.
-         - returnSameDay: Booleano. True se o texto deixar claro que voltam no mesmo dia (ex: "bate e volta", "diário"), False caso contrário.
-      3. transport: Escolha um destes: "VEÍCULO PARTICULAR", "VEÍCULO DA EMPRESA", "ÔNIBUS". Padrão: "VEÍCULO DA EMPRESA".
-
-      Responda APENAS o JSON, sem markdown.
-      Exemplo de JSON: { "technicians": ["João"], "destinations": [{ "city": "Betim", "startDate": "2023-10-20", "endDate": "2023-10-20", "visitType": "CORRETIVA", "tasks": ["Hospital Regional - Reparo"], "returnSameDay": false }], "transport": "VEÍCULO DA EMPRESA" }
-    `;
-
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-      });
-
-      const data = await response.json();
-      let jsonStr = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      
-      // Limpeza básica
-      jsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
-      
-      const extractedData = JSON.parse(jsonStr);
+      const extractedData = await analyzeTripText(importText, apiKey);
+      if (!extractedData) throw new Error("Falha na análise");
 
       // CRIA UM NOVO GRUPO COM OS DADOS IMPORTADOS
       const newGroup = createEmptyTripGroup();
@@ -265,11 +251,19 @@ export default function TravelEmail() {
       }
 
       if (extractedData.destinations && Array.isArray(extractedData.destinations)) {
-        const newDestinations = extractedData.destinations.map(dest => ({
-            ...createEmptyDestination(),
-            ...dest,
-            tasks: Array.isArray(dest.tasks) ? dest.tasks : [dest.tasks || '']
-        }));
+        const newDestinations = extractedData.destinations.map(dest => {
+            // Conversão de data do formato DD-MM-YYYY para ISO
+            const startISO = parseDateToISO(dest.startDate);
+            const endISO = parseDateToISO(dest.endDate);
+
+            return {
+                ...createEmptyDestination(),
+                ...dest,
+                startDate: startISO,
+                endDate: endISO,
+                tasks: Array.isArray(dest.tasks) ? dest.tasks : [dest.tasks || '']
+            };
+        });
         newGroup.destinations = newDestinations;
         if (newDestinations.length > 0) {
             newGroup.expandedDestinationId = newDestinations[0].id;
@@ -283,7 +277,7 @@ export default function TravelEmail() {
       setImportText('');
     } catch (error) {
       console.error("Erro na IA:", error);
-      alert("Não foi possível interpretar o texto. Tente falar de forma mais clara ou verifique a conexão.");
+      alert("Não foi possível interpretar o texto. Verifique a chave de API ou conexão.");
     } finally {
       setIsAnalyzing(false);
     }
@@ -295,26 +289,12 @@ export default function TravelEmail() {
     // Coleta resumo de todos os grupos
     const allSummaries = tripGroups.map(group => {
         const techs = group.technicians.join(', ');
-        const dests = group.destinations.map(d => `${d.city} (${d.startDate})`).join(', ');
+        const dests = group.destinations.map(d => `${d.city} (${d.startDate ? formatDateRange(d.startDate, d.endDate) : 'Data indefinida'})`).join(', ');
         return `Equipe: ${techs} -> ${dests}`;
     }).join(' | ');
 
-    const prompt = `
-      Crie um assunto de e-mail profissional, curto e direto para as seguintes viagens técnicas. 
-      Padrão desejado: "Programação de Viagem: [Cidades Principais] - [Datas Resumidas]".
-      Dados: ${allSummaries}
-      Responda APENAS o texto do assunto.
-    `;
-
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-      });
-
-      const data = await response.json();
-      const subject = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      const subject = await generateSubject(allSummaries, apiKey);
       setGeneratedSubject(subject);
     } catch (error) {
       console.error("Erro ao gerar assunto:", error);
@@ -991,5 +971,4 @@ export default function TravelEmail() {
       </div>
     </div>
   );
-}
-
+  }
