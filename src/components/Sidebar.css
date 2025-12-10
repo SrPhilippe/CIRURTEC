@@ -116,3 +116,64 @@
 .sidebar-text {
     font-size: 0.95rem;
 }
+
+/* Submenu Styles */
+.submenu-trigger {
+    cursor: pointer;
+    justify-content: space-between;
+}
+
+.submenu-arrow {
+    margin-left: auto;
+    transition: transform 0.2s ease;
+    color: #9ca3af;
+}
+
+.submenu-arrow.rotated {
+    transform: rotate(180deg);
+}
+
+.sidebar-submenu {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+    background-color: #f8fafc;
+}
+
+.sidebar-submenu.open {
+    max-height: 500px;
+    /* Arbitrary large height */
+    transition: max-height 0.5s ease-in;
+}
+
+.sidebar-item.sub-item {
+    padding-left: 3rem;
+    /* Indent sub items */
+    font-size: 0.9rem;
+    border-left: 3px solid transparent;
+}
+
+.sidebar-item.sub-item.active {
+    background-color: #eef2ff;
+    color: #4f46e5;
+    border-left-color: transparent;
+    /* Sub items might not need the border accent */
+    font-weight: 600;
+}
+
+.active-parent {
+    color: #4f46e5;
+    background-color: #f9fafb;
+}
+
+.sidebar.collapsed .submenu-arrow {
+    display: none;
+}
+
+.sidebar.collapsed .sidebar-submenu {
+    display: none;
+    /* Submenus are tricky in collapsed mode. 
+       Usually you'd use a popover or just hide them. 
+       Hiding for now as per plan. 
+    */
+}
