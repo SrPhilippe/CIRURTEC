@@ -21,4 +21,10 @@ dist-ssr
 *.ntvs*
 *.njsproj
 *.sln
-*.sw?
+*.sw
+
+# Environment variables
+.env
+.env.local
+.env.production
+.env.development
