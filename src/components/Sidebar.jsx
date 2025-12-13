@@ -14,36 +14,39 @@ import {
   Building2,
   List,
   Plus,
-  ChevronDown
+  ChevronDown,
+  LogOut
 } from 'lucide-react';
 import './Sidebar.css';
 
+import { useContext } from 'react';
+import { AuthContext } from '../context/AuthContext';
+// ... (imports remain mostly same, just added useContext and AuthContext)
+ 
+
 const Sidebar = () => {
+  const { user, logout } = useContext(AuthContext); // Get user and logout
   const location = useLocation();
   
-  // Initialize state from localStorage or default to false (expanded)
+  // ... (state logic remains same)
   const [isCollapsed, setIsCollapsed] = useState(() => {
     const savedState = localStorage.getItem('sidebarCollapsed');
     return savedState === 'true';
   });
 
-  // State for expanded submenus
   const [expandedMenus, setExpandedMenus] = useState({});
 
-  // Save state to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('sidebarCollapsed', isCollapsed);
   }, [isCollapsed]);
 
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);
-    // When collapsing sidebar, we might want to collapse submenus too, or keep them open?
-    // Let's keep them as is for now, but CSS will hide text.
   };
 
   const toggleSubmenu = (title) => {
     if (isCollapsed) {
-      setIsCollapsed(false); // Auto expand sidebar if clicking a submenu trigger while collapsed
+      setIsCollapsed(false);
       setTimeout(() => {
         setExpandedMenus(prev => ({ ...prev, [title]: !prev[title] }));
       }, 50);
@@ -64,8 +67,15 @@ const Sidebar = () => {
         { title: 'Novo Cadastro', icon: Plus, route: '/clientes/novo' },
       ]
     },
-    { title: 'Usuários', icon: Users, route: '/users', disabled: true },
-    { title: 'Configurações', icon: Settings, route: '/settings', disabled: true },
+    { 
+      title: 'Usuários', 
+      icon: Users, 
+      route: '/users', 
+      // Only show if user is ADMIN. 
+      // Note: Implementation plan said "This menu will have the list of all registered users."
+      hidden: user?.rights !== 'ADMIN'
+    }, 
+    { title: 'Configurações', icon: Settings, route: '/settings' }, // Enabled
     { title: 'Relatórios', icon: FileText, route: '/reports', disabled: true },
     { title: 'Dashboard', icon: BarChart, route: '/dashboard', disabled: true },
     { title: 'Ajuda', icon: HelpCircle, route: '/help', disabled: true },
@@ -86,9 +96,10 @@ const Sidebar = () => {
 
       <nav className="sidebar-nav">
         {menuItems.map((item, index) => {
+          if (item.hidden) return null;
+
           if (item.isSubmenu) {
             const isExpanded = expandedMenus[item.title];
-            // Check if any child is active
             const isChildActive = item.subItems.some(sub => location.pathname === sub.route);
             
             return (
@@ -110,7 +121,6 @@ const Sidebar = () => {
                   )}
                 </div>
                 
-                {/* Submmenu Items */}
                 <div className={`sidebar-submenu ${isExpanded ? 'open' : ''}`}>
                   {item.subItems.map((subItem, subIndex) => (
                     <NavLink
@@ -146,6 +156,13 @@ const Sidebar = () => {
           );
         })}
       </nav>
+
+      <div className="sidebar-footer">
+        <button className="sidebar-item logout-btn" onClick={logout} title={isCollapsed ? "Sair" : ""}>
+          <LogOut size={20} className="sidebar-icon" />
+          {!isCollapsed && <span className="sidebar-text">Sair</span>}
+        </button>
+      </div>
     </aside>
   );
 };
