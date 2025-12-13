@@ -18,15 +18,77 @@ export default function NovoCadastro() {
     { id: 1, equipamento: '', modelo: '', numeroSerie: '', dataNota: '' }
   ]);
 
+  const [errors, setErrors] = useState({});
+
+  const formatCNPJ = (value) => {
+    return value
+      .replace(/\D/g, '')
+      .replace(/^(\d{2})(\d)/, '$1.$2')
+      .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+      .replace(/\.(\d{3})(\d)/, '.$1/$2')
+      .replace(/(\d{4})(\d)/, '$1-$2')
+      .replace(/(-\d{2})\d+?$/, '$1');
+  };
+
+  const validateEmail = (email) => {
+    const regex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
+    return regex.test(email);
+  };
+
+  const validateField = (name, value) => {
+    switch (name) {
+      case 'cnpj':
+        if (!value) return 'CNPJ é obrigatório';
+        if (value.length < 18) return 'CNPJ incompleto';
+        return '';
+      case 'nomeHospital':
+        if (!value) return 'Nome do Hospital é obrigatório';
+        return '';
+      case 'email1':
+        if (!value) return 'E-mail 1 é obrigatório';
+        if (!validateEmail(value)) return 'E-mail inválido';
+        return '';
+      case 'email2':
+        if (value && !validateEmail(value)) return 'E-mail inválido';
+        return '';
+      case 'contato1':
+        if (!value) return 'Contato 1 é obrigatório';
+        if (value.length < 10) return 'Contato inválido';
+        return '';
+      case 'equipamento':
+        if (!value) return 'Obrigatório';
+        return '';
+      case 'modelo':
+        if (!value) return 'Obrigatório';
+        return '';
+      default:
+        return '';
+    }
+  };
+
   const handleClientChange = (e) => {
     const { name, value } = e.target;
-    setClientData(prev => ({ ...prev, [name]: value }));
+    let finalValue = value;
+    
+    if (name === 'cnpj') {
+      finalValue = formatCNPJ(value);
+    }
+
+    setClientData(prev => ({ ...prev, [name]: finalValue }));
+
+    // Validate
+    const error = validateField(name, finalValue);
+    setErrors(prev => ({ ...prev, [name]: error }));
   };
 
   const handleEquipmentChange = (id, field, value) => {
     setEquipments(prev => prev.map(eq => 
       eq.id === id ? { ...eq, [field]: value } : eq
     ));
+
+    const errorKey = `eq-${id}-${field}`;
+    const error = validateField(field, value);
+    setErrors(prev => ({ ...prev, [errorKey]: error }));
   };
 
   const addEquipment = () => {
@@ -43,6 +105,14 @@ export default function NovoCadastro() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const hasErrors = Object.values(errors).some(error => error);
+    const invalidEmail1 = clientData.email1 && !validateEmail(clientData.email1);
+    const invalidEmail2 = clientData.email2 && !validateEmail(clientData.email2);
+
+    if (hasErrors || invalidEmail1 || invalidEmail2) {
+        alert("Por favor, corrija os campos inválidos antes de salvar.");
+        return;
+    }
     console.log("Dados do Cliente:", clientData);
     console.log("Equipamentos:", equipments);
     alert("Cadastro salvo no console (Simulação)!");
@@ -75,9 +145,11 @@ export default function NovoCadastro() {
                 value={clientData.cnpj}
                 onChange={handleClientChange}
                 required 
+                maxLength={18}
                 placeholder="00.000.000/0000-00"
-                className="form-input"
+                className={`form-input ${errors.cnpj ? 'input-error' : ''}`}
               />
+              {errors.cnpj && <span className="error-text">{errors.cnpj}</span>}
             </div>
             
             <div className="form-group">
@@ -89,8 +161,9 @@ export default function NovoCadastro() {
                 onChange={handleClientChange}
                 required
                 placeholder="Razão Social"
-                className="form-input"
+                className={`form-input ${errors.nomeHospital ? 'input-error' : ''}`}
               />
+              {errors.nomeHospital && <span className="error-text">{errors.nomeHospital}</span>}
             </div>
 
             <div className="form-group">
@@ -128,8 +201,9 @@ export default function NovoCadastro() {
                 onChange={handleClientChange}
                 required
                 placeholder="admin@hospital.com"
-                className="form-input"
+                className={`form-input ${errors.email1 ? 'input-error' : ''}`}
               />
+              {errors.email1 && <span className="error-text">{errors.email1}</span>}
             </div>
 
             <div className="form-group">
@@ -140,8 +214,9 @@ export default function NovoCadastro() {
                 value={clientData.email2}
                 onChange={handleClientChange}
                 placeholder="financeiro@hospital.com"
-                className="form-input"
+                className={`form-input ${errors.email2 ? 'input-error' : ''}`}
               />
+              {errors.email2 && <span className="error-text">{errors.email2}</span>}
             </div>
 
             <div className="form-group">
@@ -153,8 +228,9 @@ export default function NovoCadastro() {
                 onChange={handleClientChange}
                 required
                 placeholder="(31) 99999-9999"
-                className="form-input"
+                className={`form-input ${errors.contato1 ? 'input-error' : ''}`}
               />
+              {errors.contato1 && <span className="error-text">{errors.contato1}</span>}
             </div>
 
             <div className="form-group">
