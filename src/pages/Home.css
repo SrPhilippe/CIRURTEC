@@ -22,6 +22,13 @@
     line-height: 1.2;
 }
 
+.home-logo {
+    height: 80px;
+    /* Increased a bit to look substantial */
+    width: auto;
+    margin-bottom: 0.5rem;
+}
+
 .home-header p {
     color: #64748b;
     font-size: 1.1rem;

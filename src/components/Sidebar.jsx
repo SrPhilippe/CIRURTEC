@@ -4,7 +4,7 @@ import {
   Home, 
   ChevronLeft, 
   ChevronRight, 
-  Plane, 
+  Car, 
   Users, 
   Settings, 
   FileText, 
@@ -58,7 +58,7 @@ const Sidebar = () => {
 
   const menuItems = [
     { title: 'Início', icon: Home, route: '/', exact: true },
-    { title: 'E-mail de Viagens', icon: Plane, route: '/email-viagem' },
+    { title: 'Viagens', icon: Car, route: '/email-viagem' },
     { 
       title: 'Clientes', 
       icon: Building2, 
