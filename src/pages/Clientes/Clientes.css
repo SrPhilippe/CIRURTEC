@@ -393,3 +393,18 @@
     text-align: center;
     color: var(--text-secondary);
 }
+
+/* Document View Styles */
+.document-value {
+    padding: 0.75rem 0;
+    font-size: 1rem;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border);
+    min-height: 2.5rem;
+    display: flex;
+    align-items: center;
+}
+
+.document-value .badge {
+    margin: 0;
+}

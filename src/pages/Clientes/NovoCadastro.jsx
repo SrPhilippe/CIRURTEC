@@ -1,8 +1,46 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
-import { Building2, Plus, Save, Trash2, Printer, ArrowLeft } from 'lucide-react';
+import { Building2, Plus, Save, Trash2, Printer, ArrowLeft, Edit } from 'lucide-react';
 import './Clientes.css';
+
+// Helper functions (outside component or inside)
+const formatPhone = (value) => {
+  const digits = value.replace(/\D/g, '').slice(0, 11);
+  if (digits.length > 10) {
+    return digits.replace(/^(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+  } else if (digits.length > 5) {
+    return digits.replace(/^(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
+  } else if (digits.length > 2) {
+    return digits.replace(/^(\d{2})(\d{0,5})/, '($1) $2');
+  }
+  return digits;
+};
+
+const formatDate = (value) => {
+  const digits = value.replace(/\D/g, '').slice(0, 8);
+  if (digits.length >= 5) {
+      return digits.replace(/^(\d{2})(\d{2})(\d{0,4})/, '$1/$2/$3');
+  } else if (digits.length >= 3) {
+      return digits.replace(/^(\d{2})(\d{0,2})/, '$1/$2');
+  }
+  return digits;
+};
+
+const isValidDate = (dateString) => {
+    // Expected format: DD/MM/YYYY
+    if (!/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) return false;
+    
+    const [day, month, year] = dateString.split('/').map(Number);
+    
+    if (day < 1 || day > 31) return false;
+    if (month < 1 || month > 12) return false;
+    if (year < 1900 || year > 2100) return false;
+
+    // Simple check for days in month
+    const daysInMonth = new Date(year, month, 0).getDate();
+    return day <= daysInMonth;
+};
 
 export default function NovoCadastro() {
   const { id } = useParams();
@@ -41,21 +79,27 @@ export default function NovoCadastro() {
     try {
       setLoading(true);
       const response = await api.get(`/clients/${clientId}`);
-      const data = response.data;
+      const { client, equipments: clientEquipments } = response.data;
       
       setClientData({
-        cnpj: data.cnpj,
-        nomeHospital: data.nome_hospital,
-        nomeFantasia: data.nome_fantasia || '',
-        email1: data.email1,
-        email2: data.email2 || '',
-        contato1: data.contato1,
-        contato2: data.contato2 || '',
-        tipoCliente: data.tipo_cliente
+        cnpj: client.cnpj,
+        nomeHospital: client.nome_hospital,
+        nomeFantasia: client.nome_fantasia || '',
+        email1: client.email1,
+        email2: client.email2 || '',
+        contato1: client.contato1,
+        contato2: client.contato2 || '',
+        tipoCliente: client.tipo_cliente
       });
 
-      if (data.equipments && data.equipments.length > 0) {
-        setEquipments(data.equipments);
+      if (clientEquipments && clientEquipments.length > 0) {
+        setEquipments(clientEquipments.map(eq => ({
+            id: eq.id,
+            equipamento: eq.equipamento,
+            modelo: eq.modelo,
+            numeroSerie: eq.numero_serie, // Map from snake_case
+            dataNota: eq.data_nota      // Map from snake_case
+        })));
       }
     } catch (error) {
       console.error('Error fetching client:', error);
@@ -159,39 +203,35 @@ export default function NovoCadastro() {
 
   const handleClientChange = (e) => {
     const { name, value } = e.target;
-    let finalValue = value;
+    let formattedValue = value;
     
     if (name === 'cnpj') {
-      finalValue = formatCNPJ(value);
-      
-      // Trigger lookup when full CNPJ is entered (14 digits + formatting = 18 chars)
-      const cleanValue = finalValue.replace(/\D/g, '');
+      formattedValue = formatCNPJ(value);
+    } else if (name === 'contato1' || name === 'contato2') {
+        formattedValue = formatPhone(value);
+    }
+
+    setClientData(prev => ({ ...prev, [name]: formattedValue }));
+
+    // Trigger lookup when full CNPJ is entered (14 digits + formatting = 18 chars)
+    if (name === 'cnpj') {
+      const cleanValue = formattedValue.replace(/\D/g, '');
       if (cleanValue.length === 14) {
         fetchCNPJData(cleanValue);
       }
     }
-
-    setClientData(prev => ({ ...prev, [name]: finalValue }));
-
-    // Validate
-    const error = validateField(name, finalValue);
-    setErrors(prev => ({ ...prev, [name]: error }));
   };
 
   const handleEquipmentChange = (id, field, value) => {
-    let finalValue = value;
+    let formattedValue = value;
     
     if (field === 'dataNota') {
-      finalValue = formatDate(value);
+      formattedValue = formatDate(value);
     }
 
     setEquipments(prev => prev.map(eq => 
-      eq.id === id ? { ...eq, [field]: finalValue } : eq
+      eq.id === id ? { ...eq, [field]: formattedValue } : eq
     ));
-
-    const errorKey = `eq-${id}-${field}`;
-    const error = validateField(field, finalValue);
-    setErrors(prev => ({ ...prev, [errorKey]: error }));
   };
 
   const addEquipment = () => {
@@ -210,17 +250,39 @@ export default function NovoCadastro() {
     e.preventDefault();
     setSuccessMessage('');
     setErrorMessage('');
+    setLoading(true);
 
-    const hasErrors = Object.values(errors).some(error => error);
-    const invalidEmail1 = clientData.email1 && !validateEmail(clientData.email1);
-    const invalidEmail2 = clientData.email2 && !validateEmail(clientData.email2);
+    const newErrors = {};
 
-    if (hasErrors || invalidEmail1 || invalidEmail2) {
-        setErrorMessage("Por favor, corrija os campos inválidos antes de salvar.");
-        return;
+    // Validate client data
+    for (const key in clientData) {
+        const error = validateField(key, clientData[key]);
+        if (error) {
+            newErrors[key] = error;
+        }
     }
 
-    setLoading(true);
+    // Validate equipment data
+    equipments.forEach((eq, index) => {
+        const eqFields = ['equipamento', 'modelo', 'numeroSerie', 'dataNota'];
+        eqFields.forEach(field => {
+            const error = validateField(field, eq[field]);
+            if (error) {
+                newErrors[`eq-${eq.id}-${field}`] = error;
+            }
+        });
+        // Validate Dates
+        if (eq.dataNota && !isValidDate(eq.dataNota)) {
+            newErrors[`eq-${eq.id}-dataNota`] = 'Data inválida (DD/MM/AAAA)';
+        }
+    });
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setErrorMessage('Por favor, corrija os erros no formulário.');
+      setLoading(false);
+      return;
+    }
 
     try {
       if (id) {
@@ -237,18 +299,20 @@ export default function NovoCadastro() {
         setSuccessMessage('Cliente cadastrado com sucesso!');
       }
       
-      // Clear form
-      setClientData({
-        cnpj: '',
-        nomeHospital: '',
-        nomeFantasia: '',
-        email1: '',
-        email2: '',
-        contato1: '',
-        contato2: '',
-        tipoCliente: 'CEMIG'
-      });
-      setEquipments([{ id: 1, equipamento: '', modelo: '', numeroSerie: '', dataNota: '' }]);
+      // Clear form if new registration
+      if (!id) {
+        setClientData({
+            cnpj: '',
+            nomeHospital: '',
+            nomeFantasia: '',
+            email1: '',
+            email2: '',
+            contato1: '',
+            contato2: '',
+            tipoCliente: 'CEMIG'
+        });
+        setEquipments([{ id: 1, equipamento: '', modelo: '', numeroSerie: '', dataNota: '' }]);
+      }
       setErrors({});
 
       // Clear success message after 5 seconds
@@ -274,6 +338,11 @@ export default function NovoCadastro() {
           <Building2 size={32} /> {isViewMode ? 'Visualizar Cliente' : isEditMode ? 'Editar Cliente' : 'Novo Cadastro de Cliente'}
         </h1>
         <div className="action-bar" style={{ marginTop: 0 }}>
+             {isViewMode && (
+               <button className="btn-primary" onClick={() => navigate(`/clientes/editar/${id}`)}>
+                  <Edit size={18} /> Editar
+               </button>
+             )}
              <button className="btn-secondary">
                 <Printer size={18} /> Imprimir Ficha
              </button>
@@ -293,196 +362,187 @@ export default function NovoCadastro() {
       )}
 
       <form onSubmit={handleSubmit}>
-        {/* DADOS DO CLIENTE */}
-        <div className="client-form-card">
-          <h2 className="form-section-title">Dados da Instituição</h2>
-          
-          <div className="form-grid">
-            <div className="form-group">
-              <label className="form-label">
-                CNPJ * 
-                {loadingCnpj && <span style={{ marginLeft: '10px', fontSize: '0.8rem', color: '#6366f1' }}>Buscando dados...</span>}
-              </label>
-              <input 
-                type="text" 
-                name="cnpj" 
-                value={clientData.cnpj}
-                onChange={handleClientChange}
-                required 
-                maxLength={18}
-                placeholder="00.000.000/0000-00"
-                className={`form-input ${errors.cnpj ? 'input-error' : ''}`}
-                disabled={loadingCnpj || isViewMode}
-              />
-              {errors.cnpj && <span className="error-text">{errors.cnpj}</span>}
-            </div>
-            
-            <div className="form-group">
-              <label className="form-label">Nome do Hospital *</label>
-              <input 
-                type="text" 
-                name="nomeHospital"
-                value={clientData.nomeHospital}
-                onChange={handleClientChange}
-                required
-                disabled={isViewMode}
-                placeholder="Razão Social"
-                className={`form-input ${errors.nomeHospital ? 'input-error' : ''}`}
-              />
-              {errors.nomeHospital && <span className="error-text">{errors.nomeHospital}</span>}
+        {!isViewMode ? (
+          <>
+            {/* DADOS DO CLIENTE - MODE EDIT/CREATE */}
+            <div className="client-form-card">
+              <h2 className="form-section-title">Dados da Instituição</h2>
+              
+              <div className="form-grid">
+                <div className="form-group">
+                  <label className="form-label">
+                    CNPJ * 
+                    {loadingCnpj && <span style={{ marginLeft: '10px', fontSize: '0.8rem', color: '#6366f1' }}>Buscando dados...</span>}
+                  </label>
+                  <input 
+                    type="text" 
+                    name="cnpj" 
+                    value={clientData.cnpj}
+                    onChange={handleClientChange}
+                    required 
+                    maxLength={18}
+                    placeholder="00.000.000/0000-00"
+                    className={`form-input ${errors.cnpj ? 'input-error' : ''}`}
+                    disabled={loadingCnpj}
+                  />
+                  {errors.cnpj && <span className="error-text">{errors.cnpj}</span>}
+                </div>
+                
+                <div className="form-group">
+                  <label className="form-label">Nome do Hospital *</label>
+                  <input 
+                    type="text" 
+                    name="nomeHospital"
+                    value={clientData.nomeHospital}
+                    onChange={handleClientChange}
+                    required
+                    placeholder="Razão Social"
+                    className={`form-input ${errors.nomeHospital ? 'input-error' : ''}`}
+                  />
+                  {errors.nomeHospital && <span className="error-text">{errors.nomeHospital}</span>}
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Nome Fantasia</label>
+                  <input 
+                    type="text" 
+                    name="nomeFantasia"
+                    value={clientData.nomeFantasia}
+                    onChange={handleClientChange}
+                    placeholder="Nome Popular"
+                    className="form-input"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Tipo de Cliente *</label>
+                  <select 
+                    name="tipoCliente" 
+                    value={clientData.tipoCliente}
+                    onChange={handleClientChange}
+                    required
+                    className="form-select"
+                  >
+                    <option value="CEMIG">CEMIG</option>
+                    <option value="CIRURTEC">CIRURTEC</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">E-mail 1 *</label>
+                  <input 
+                    type="email" 
+                    name="email1"
+                    value={clientData.email1}
+                    onChange={handleClientChange}
+                    required
+                    placeholder="admin@hospital.com"
+                    className={`form-input ${errors.email1 ? 'input-error' : ''}`}
+                  />
+                  {errors.email1 && <span className="error-text">{errors.email1}</span>}
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">E-mail 2</label>
+                  <input 
+                    type="email" 
+                    name="email2"
+                    value={clientData.email2}
+                    onChange={handleClientChange}
+                    placeholder="financeiro@hospital.com"
+                    className={`form-input ${errors.email2 ? 'input-error' : ''}`}
+                  />
+                  {errors.email2 && <span className="error-text">{errors.email2}</span>}
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Contato 1 *</label>
+                  <input 
+                    type="tel" 
+                    name="contato1"
+                    value={clientData.contato1}
+                    onChange={handleClientChange}
+                    required
+                    placeholder="(31) 99999-9999"
+                    className={`form-input ${errors.contato1 ? 'input-error' : ''}`}
+                  />
+                  {errors.contato1 && <span className="error-text">{errors.contato1}</span>}
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Contato 2</label>
+                  <input 
+                    type="tel" 
+                    name="contato2"
+                    value={clientData.contato2}
+                    onChange={handleClientChange}
+                    placeholder="(31) 98888-8888"
+                    className="form-input"
+                  />
+                </div>
+              </div>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Nome Fantasia</label>
-              <input 
-                type="text" 
-                name="nomeFantasia"
-                value={clientData.nomeFantasia}
-                onChange={handleClientChange}
-                placeholder="Nome Popular"
-                disabled={isViewMode}
-                className="form-input"
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Tipo de Cliente *</label>
-              <select 
-                name="tipoCliente" 
-                value={clientData.tipoCliente}
-                onChange={handleClientChange}
-                required
-                disabled={isViewMode}
-                className="form-select"
-              >
-                <option value="CEMIG">CEMIG</option>
-                <option value="CIRURTEC">CIRURTEC</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">E-mail 1 *</label>
-              <input 
-                type="email" 
-                name="email1"
-                value={clientData.email1}
-                onChange={handleClientChange}
-                required
-                placeholder="admin@hospital.com"
-                disabled={isViewMode}
-                className={`form-input ${errors.email1 ? 'input-error' : ''}`}
-              />
-              {errors.email1 && <span className="error-text">{errors.email1}</span>}
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">E-mail 2</label>
-              <input 
-                type="email" 
-                name="email2"
-                value={clientData.email2}
-                onChange={handleClientChange}
-                placeholder="financeiro@hospital.com"
-                disabled={isViewMode}
-                className={`form-input ${errors.email2 ? 'input-error' : ''}`}
-              />
-              {errors.email2 && <span className="error-text">{errors.email2}</span>}
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Contato 1 *</label>
-              <input 
-                type="tel" 
-                name="contato1"
-                value={clientData.contato1}
-                onChange={handleClientChange}
-                required
-                placeholder="(31) 99999-9999"
-                disabled={isViewMode}
-                className={`form-input ${errors.contato1 ? 'input-error' : ''}`}
-              />
-              {errors.contato1 && <span className="error-text">{errors.contato1}</span>}
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Contato 2</label>
-              <input 
-                type="tel" 
-                name="contato2"
-                value={clientData.contato2}
-                onChange={handleClientChange}
-                placeholder="(31) 98888-8888"
-                disabled={isViewMode}
-                className="form-input"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* EQUIPAMENTOS */}
-        <div className="client-form-card equipments-section">
-          <h2 className="form-section-title">Equipamentos Instalados</h2>
-          
-          <div className="equipment-table-wrapper">
-            <table className="equipment-table">
-              <thead>
-                <tr>
-                  <th>Equipamento</th>
-                  <th>Modelo</th>
-                  <th>Número de Série</th>
-                  <th>Data Nota Fiscal</th>
-                  <th style={{ width: '50px' }}></th>
-                </tr>
-              </thead>
-              <tbody>
-                {equipments.map((eq) => (
-                  <tr key={eq.id}>
-                    <td>
-                      <input 
-                        type="text" 
-                        value={eq.equipamento}
-                        onChange={(e) => handleEquipmentChange(eq.id, 'equipamento', e.target.value)}
-                        placeholder="Ex: Termodesinfectora"
-                        disabled={isViewMode}
-                        className={`table-input ${errors[`eq-${eq.id}-equipamento`] ? 'input-error' : ''}`}
-                      />
-                      {errors[`eq-${eq.id}-equipamento`] && <span className="error-text">{errors[`eq-${eq.id}-equipamento`]}</span>}
-                    </td>
-                    <td>
-                      <input 
-                        type="text" 
-                        value={eq.modelo}
-                        onChange={(e) => handleEquipmentChange(eq.id, 'modelo', e.target.value)}
-                        placeholder="Ex: XYZ-2000"
-                        disabled={isViewMode}
-                        className={`table-input ${errors[`eq-${eq.id}-modelo`] ? 'input-error' : ''}`}
-                      />
-                      {errors[`eq-${eq.id}-modelo`] && <span className="error-text">{errors[`eq-${eq.id}-modelo`]}</span>}
-                    </td>
-                    <td>
-                      <input 
-                        type="text" 
-                        value={eq.numeroSerie}
-                        onChange={(e) => handleEquipmentChange(eq.id, 'numeroSerie', e.target.value)}
-                        placeholder="SN123456"
-                        disabled={isViewMode}
-                        className="table-input"
-                      />
-                    </td>
-                    <td>
-                      <input 
-                        type="text" 
-                        value={eq.dataNota}
-                        onChange={(e) => handleEquipmentChange(eq.id, 'dataNota', e.target.value)}
-                        placeholder="DD/MM/AAAA"
-                        maxLength={10}
-                        disabled={isViewMode}
-                        className={`table-input ${errors[`eq-${eq.id}-dataNota`] ? 'input-error' : ''}`}
-                      />
-                      {errors[`eq-${eq.id}-dataNota`] && <span className="error-text">{errors[`eq-${eq.id}-dataNota`]}</span>}
-                    </td>
-                    <td>
-                      {equipments.length > 1 && !isViewMode && (
+            {/* EQUIPAMENTOS - MODE EDIT/CREATE */}
+            <div className="client-form-card equipments-section">
+              <h2 className="form-section-title">Equipamentos Instalados</h2>
+              
+              <div className="equipment-table-wrapper">
+                <table className="equipment-table">
+                  <thead>
+                    <tr>
+                      <th>Equipamento</th>
+                      <th>Modelo</th>
+                      <th>Número de Série</th>
+                      <th>Data Nota Fiscal</th>
+                      <th style={{ width: '50px' }}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {equipments.map((eq) => (
+                      <tr key={eq.id}>
+                        <td>
+                          <input 
+                            type="text" 
+                            value={eq.equipamento}
+                            onChange={(e) => handleEquipmentChange(eq.id, 'equipamento', e.target.value)}
+                            placeholder="Ex: Termodesinfectora"
+                            className={`table-input ${errors[`eq-${eq.id}-equipamento`] ? 'input-error' : ''}`}
+                          />
+                          {errors[`eq-${eq.id}-equipamento`] && <span className="error-text">{errors[`eq-${eq.id}-equipamento`]}</span>}
+                        </td>
+                        <td>
+                          <input 
+                            type="text" 
+                            value={eq.modelo}
+                            onChange={(e) => handleEquipmentChange(eq.id, 'modelo', e.target.value)}
+                            placeholder="Ex: XYZ-2000"
+                            className={`table-input ${errors[`eq-${eq.id}-modelo`] ? 'input-error' : ''}`}
+                          />
+                          {errors[`eq-${eq.id}-modelo`] && <span className="error-text">{errors[`eq-${eq.id}-modelo`]}</span>}
+                        </td>
+                        <td>
+                          <input 
+                            type="text" 
+                            value={eq.numeroSerie}
+                            onChange={(e) => handleEquipmentChange(eq.id, 'numeroSerie', e.target.value)}
+                            placeholder="SN123456"
+                            className="table-input"
+                          />
+                        </td>
+                        <td>
+                          <input 
+                            type="text" 
+                            value={eq.dataNota}
+                            onChange={(e) => handleEquipmentChange(eq.id, 'dataNota', e.target.value)}
+                            placeholder="DD/MM/AAAA"
+                            maxLength={10}
+                            className={`table-input ${errors[`eq-${eq.id}-dataNota`] ? 'input-error' : ''}`}
+                          />
+                          {errors[`eq-${eq.id}-dataNota`] && <span className="error-text">{errors[`eq-${eq.id}-dataNota`]}</span>}
+                        </td>
+                        <td>
+                          { !isViewMode && (
                         <button 
                           type="button" 
                           onClick={() => removeEquipment(eq.id)}
@@ -492,23 +552,94 @@ export default function NovoCadastro() {
                           <Trash2 size={18} />
                         </button>
                       )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
-          {!isViewMode && (
-          <button 
-            type="button" 
-            onClick={addEquipment}
-            className="btn-add-equip"
-          >
-            <Plus size={18} /> Adicionar mais equipamentos
-          </button>
-          )}
-        </div>
+              <button 
+                type="button" 
+                onClick={addEquipment}
+                className="btn-add-equip"
+              >
+                <Plus size={18} /> Adicionar mais equipamentos
+              </button>
+            </div>
+          </>
+        ) : (
+          /* DOCUMENT VIEW MODE */
+          <>
+            <div className="client-form-card">
+              <h2 className="form-section-title">Dados da Instituição</h2>
+              <div className="form-grid">
+                <div className="form-group">
+                    <label className="form-label">CNPJ</label>
+                    <div className="document-value">{clientData.cnpj || '-'}</div>
+                </div>
+                <div className="form-group">
+                    <label className="form-label">Nome do Hospital</label>
+                    <div className="document-value">{clientData.nomeHospital || '-'}</div>
+                </div>
+                <div className="form-group">
+                    <label className="form-label">Nome Fantasia</label>
+                    <div className="document-value">{clientData.nomeFantasia || '-'}</div>
+                </div>
+                <div className="form-group">
+                    <label className="form-label">Tipo de Cliente</label>
+                    <div className="document-value">
+                        <span className={`badge badge-${clientData.tipoCliente?.toLowerCase()}`}>
+                          {clientData.tipoCliente}
+                        </span>
+                    </div>
+                </div>
+                <div className="form-group">
+                    <label className="form-label">E-mail 1</label>
+                    <div className="document-value">{clientData.email1 || '-'}</div>
+                </div>
+                <div className="form-group">
+                    <label className="form-label">E-mail 2</label>
+                    <div className="document-value">{clientData.email2 || '-'}</div>
+                </div>
+                <div className="form-group">
+                    <label className="form-label">Contato 1</label>
+                    <div className="document-value">{clientData.contato1 || '-'}</div>
+                </div>
+                <div className="form-group">
+                    <label className="form-label">Contato 2</label>
+                    <div className="document-value">{clientData.contato2 || '-'}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="client-form-card equipments-section">
+              <h2 className="form-section-title">Equipamentos Instalados</h2>
+              <div className="table-responsive">
+                <table className="clients-table">
+                  <thead>
+                    <tr>
+                      <th>Equipamento</th>
+                      <th>Modelo</th>
+                      <th>Número de Série</th>
+                      <th>Data Nota Fiscal</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {equipments.map((eq) => (
+                      <tr key={eq.id}>
+                        <td>{eq.equipamento || '-'}</td>
+                        <td>{eq.modelo || '-'}</td>
+                        <td>{eq.numeroSerie || '-'}</td>
+                        <td>{eq.dataNota || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
 
         {/* ACTIONS */}
         <div className="action-bar">
@@ -521,7 +652,6 @@ export default function NovoCadastro() {
             </button>
           )}
         </div>
-
       </form>
     </div>
   );

@@ -122,6 +122,76 @@ router.get('/:id', verifyToken, async (req, res) => {
     }
 })
 
+// Update client
+router.put('/:id', verifyToken, async (req, res) => {
+    const { clientData, equipments } = req.body
+    let connection
+
+    try {
+        if (!clientData.cnpj || !clientData.nomeHospital || !clientData.email1 || !clientData.contato1) {
+            return res.status(400).json({ message: 'Campos obrigatórios faltando' })
+        }
+
+        connection = await pool.getConnection()
+        await connection.beginTransaction()
+
+        // Update client info
+        await connection.query(
+            `UPDATE clients 
+       SET cnpj = ?, nome_hospital = ?, nome_fantasia = ?, email1 = ?, email2 = ?, contato1 = ?, contato2 = ?, tipo_cliente = ?
+       WHERE id = ?`,
+            [
+                clientData.cnpj,
+                clientData.nomeHospital,
+                clientData.nomeFantasia || null,
+                clientData.email1,
+                clientData.email2 || null,
+                clientData.contato1,
+                clientData.contato2 || null,
+                clientData.tipoCliente,
+                req.params.id
+            ]
+        )
+
+        // Update equipments: Delete all and re-insert (simplest strategy to handle adds/removes/edits)
+        await connection.query('DELETE FROM equipments WHERE client_id = ?', [req.params.id])
+
+        if (equipments && equipments.length > 0) {
+            for (const equipment of equipments) {
+                if (!equipment.equipamento && !equipment.modelo) continue
+
+                const equipmentId = randomUUID()
+                await connection.query(
+                    `INSERT INTO equipments 
+           (id, client_id, equipamento, modelo, numero_serie, data_nota) 
+           VALUES (?, ?, ?, ?, ?, ?)`,
+                    [
+                        equipmentId,
+                        req.params.id,
+                        equipment.equipamento,
+                        equipment.modelo,
+                        equipment.numeroSerie || null,
+                        equipment.dataNota || null
+                    ]
+                )
+            }
+        }
+
+        await connection.commit()
+        res.json({ message: 'Cliente atualizado com sucesso' })
+
+    } catch (error) {
+        if (connection) await connection.rollback()
+        console.error('Error updating client:', error)
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({ message: 'CNPJ já cadastrado em outro cliente' })
+        }
+        res.status(500).json({ message: 'Erro ao atualizar cliente' })
+    } finally {
+        if (connection) connection.release()
+    }
+})
+
 // Delete client
 router.delete('/:id', verifyToken, async (req, res) => {
     let connection
