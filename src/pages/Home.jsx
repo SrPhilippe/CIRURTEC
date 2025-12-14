@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import MenuCard from '../components/MenuCard';
-import { Plane, Users, Settings, FileText, BarChart, HelpCircle, LogOut } from 'lucide-react';
+import { Plane, Users, UserCircle, Settings, FileText, BarChart, HelpCircle, LogOut } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import './Home.css'; // Assuming you might create this or use inline/existing styles if any
 
@@ -9,6 +9,7 @@ const Home = () => {
 
   const menuItems = [
     { title: 'E-mail de Viagens', icon: Plane, route: '/email-viagem', disabled: false },
+    { title: 'Clientes', icon: UserCircle, route: '/clientes/lista', disabled: false },
     { 
       title: 'Usuários', 
       icon: Users, 

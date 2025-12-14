@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Building2, Plus, Save, Trash2, Printer } from 'lucide-react';
+import api from '../../services/api';
 import './Clientes.css';
 
 export default function NovoCadastro() {
@@ -19,6 +20,44 @@ export default function NovoCadastro() {
   ]);
 
   const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const [loadingCnpj, setLoadingCnpj] = useState(false);
+
+  const fetchCNPJData = async (cnpj) => {
+    setLoadingCnpj(true);
+    setErrors(prev => ({ ...prev, cnpj: '' })); // Clear previous errors
+    
+    try {
+      const cleanCNPJ = cnpj.replace(/\D/g, '');
+      const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cleanCNPJ}`);
+      
+      if (!response.ok) {
+        throw new Error('CNPJ não encontrado ou erro na consulta');
+      }
+
+      const data = await response.json();
+      
+      setClientData(prev => ({
+        ...prev,
+        nomeHospital: data.razao_social || '',
+        nomeFantasia: data.nome_fantasia || data.razao_social || '',
+        email1: data.email || '',
+        email2: '', // API might not give secondary email neatly, usually main email
+        contato1: data.ddd_telefone_1 ? `(${data.ddd_telefone_1}) ${data.telefone_1}` : '',
+        contato2: data.ddd_telefone_2 ? `(${data.ddd_telefone_2}) ${data.telefone_2}` : '',
+        // Address could be added if you had address fields (cep, logradouro, etc.)
+      }));
+
+    } catch (error) {
+      console.error('Erro ao buscar CNPJ:', error);
+      setErrors(prev => ({ ...prev, cnpj: 'Erro ao buscar CNPJ. Verifique se está correto.' }));
+    } finally {
+      setLoadingCnpj(false);
+    }
+  };
 
   const formatCNPJ = (value) => {
     return value
@@ -28,6 +67,14 @@ export default function NovoCadastro() {
       .replace(/\.(\d{3})(\d)/, '.$1/$2')
       .replace(/(\d{4})(\d)/, '$1-$2')
       .replace(/(-\d{2})\d+?$/, '$1');
+  };
+
+  const formatDate = (value) => {
+    return value
+      .replace(/\D/g, '')
+      .replace(/^(\d{2})(\d)/, '$1/$2')
+      .replace(/^(\d{2})\/(\d{2})(\d)/, '$1/$2/$3')
+      .replace(/(\d{4})\d+?$/, '$1');
   };
 
   const validateEmail = (email) => {
@@ -61,6 +108,9 @@ export default function NovoCadastro() {
       case 'modelo':
         if (!value) return 'Obrigatório';
         return '';
+      case 'dataNota':
+        if (value && value.length > 0 && value.length < 10) return 'Data incompleta';
+        return '';
       default:
         return '';
     }
@@ -72,6 +122,12 @@ export default function NovoCadastro() {
     
     if (name === 'cnpj') {
       finalValue = formatCNPJ(value);
+      
+      // Trigger lookup when full CNPJ is entered (14 digits + formatting = 18 chars)
+      const cleanValue = finalValue.replace(/\D/g, '');
+      if (cleanValue.length === 14) {
+        fetchCNPJData(cleanValue);
+      }
     }
 
     setClientData(prev => ({ ...prev, [name]: finalValue }));
@@ -82,12 +138,18 @@ export default function NovoCadastro() {
   };
 
   const handleEquipmentChange = (id, field, value) => {
+    let finalValue = value;
+    
+    if (field === 'dataNota') {
+      finalValue = formatDate(value);
+    }
+
     setEquipments(prev => prev.map(eq => 
-      eq.id === id ? { ...eq, [field]: value } : eq
+      eq.id === id ? { ...eq, [field]: finalValue } : eq
     ));
 
     const errorKey = `eq-${id}-${field}`;
-    const error = validateField(field, value);
+    const error = validateField(field, finalValue);
     setErrors(prev => ({ ...prev, [errorKey]: error }));
   };
 
@@ -103,19 +165,54 @@ export default function NovoCadastro() {
     setEquipments(prev => prev.filter(eq => eq.id !== id));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setSuccessMessage('');
+    setErrorMessage('');
+
     const hasErrors = Object.values(errors).some(error => error);
     const invalidEmail1 = clientData.email1 && !validateEmail(clientData.email1);
     const invalidEmail2 = clientData.email2 && !validateEmail(clientData.email2);
 
     if (hasErrors || invalidEmail1 || invalidEmail2) {
-        alert("Por favor, corrija os campos inválidos antes de salvar.");
+        setErrorMessage("Por favor, corrija os campos inválidos antes de salvar.");
         return;
     }
-    console.log("Dados do Cliente:", clientData);
-    console.log("Equipamentos:", equipments);
-    alert("Cadastro salvo no console (Simulação)!");
+
+    setLoading(true);
+
+    try {
+      await api.post('/clients', {
+        clientData,
+        equipments
+      });
+
+      setSuccessMessage('Cliente cadastrado com sucesso!');
+      
+      // Clear form
+      setClientData({
+        cnpj: '',
+        nomeHospital: '',
+        nomeFantasia: '',
+        email1: '',
+        email2: '',
+        contato1: '',
+        contato2: '',
+        tipoCliente: 'CEMIG'
+      });
+      setEquipments([{ id: 1, equipamento: '', modelo: '', numeroSerie: '', dataNota: '' }]);
+      setErrors({});
+
+      // Clear success message after 5 seconds
+      setTimeout(() => setSuccessMessage(''), 5000);
+
+    } catch (error) {
+      console.error('Error saving client:', error);
+      const message = error.response?.data?.message || 'Erro ao cadastrar cliente';
+      setErrorMessage(message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -131,6 +228,18 @@ export default function NovoCadastro() {
         </div>
       </div>
 
+      {/* Success/Error Messages */}
+      {successMessage && (
+        <div className="alert alert-success">
+          {successMessage}
+        </div>
+      )}
+      {errorMessage && (
+        <div className="alert alert-error">
+          {errorMessage}
+        </div>
+      )}
+
       <form onSubmit={handleSubmit}>
         {/* DADOS DO CLIENTE */}
         <div className="client-form-card">
@@ -138,7 +247,10 @@ export default function NovoCadastro() {
           
           <div className="form-grid">
             <div className="form-group">
-              <label className="form-label">CNPJ *</label>
+              <label className="form-label">
+                CNPJ * 
+                {loadingCnpj && <span style={{ marginLeft: '10px', fontSize: '0.8rem', color: '#6366f1' }}>Buscando dados...</span>}
+              </label>
               <input 
                 type="text" 
                 name="cnpj" 
@@ -148,6 +260,7 @@ export default function NovoCadastro() {
                 maxLength={18}
                 placeholder="00.000.000/0000-00"
                 className={`form-input ${errors.cnpj ? 'input-error' : ''}`}
+                disabled={loadingCnpj}
               />
               {errors.cnpj && <span className="error-text">{errors.cnpj}</span>}
             </div>
@@ -270,9 +383,10 @@ export default function NovoCadastro() {
                         type="text" 
                         value={eq.equipamento}
                         onChange={(e) => handleEquipmentChange(eq.id, 'equipamento', e.target.value)}
-                        placeholder="Ex: Tomógrafo"
-                        className="table-input"
+                        placeholder="Ex: Termodesinfectora"
+                        className={`table-input ${errors[`eq-${eq.id}-equipamento`] ? 'input-error' : ''}`}
                       />
+                      {errors[`eq-${eq.id}-equipamento`] && <span className="error-text">{errors[`eq-${eq.id}-equipamento`]}</span>}
                     </td>
                     <td>
                       <input 
@@ -280,8 +394,9 @@ export default function NovoCadastro() {
                         value={eq.modelo}
                         onChange={(e) => handleEquipmentChange(eq.id, 'modelo', e.target.value)}
                         placeholder="Ex: XYZ-2000"
-                        className="table-input"
+                        className={`table-input ${errors[`eq-${eq.id}-modelo`] ? 'input-error' : ''}`}
                       />
+                      {errors[`eq-${eq.id}-modelo`] && <span className="error-text">{errors[`eq-${eq.id}-modelo`]}</span>}
                     </td>
                     <td>
                       <input 
@@ -294,11 +409,14 @@ export default function NovoCadastro() {
                     </td>
                     <td>
                       <input 
-                        type="date" 
+                        type="text" 
                         value={eq.dataNota}
                         onChange={(e) => handleEquipmentChange(eq.id, 'dataNota', e.target.value)}
-                        className="table-input"
+                        placeholder="DD/MM/AAAA"
+                        maxLength={10}
+                        className={`table-input ${errors[`eq-${eq.id}-dataNota`] ? 'input-error' : ''}`}
                       />
+                      {errors[`eq-${eq.id}-dataNota`] && <span className="error-text">{errors[`eq-${eq.id}-dataNota`]}</span>}
                     </td>
                     <td>
                       {equipments.length > 1 && (
@@ -330,8 +448,8 @@ export default function NovoCadastro() {
         {/* ACTIONS */}
         <div className="action-bar">
           <button type="button" className="btn-secondary">Cancelar</button>
-          <button type="submit" className="btn-primary">
-            <Save size={18} /> Salvar Cadastro
+          <button type="submit" className="btn-primary" disabled={loading}>
+            <Save size={18} /> {loading ? 'Salvando...' : 'Salvar Cadastro'}
           </button>
         </div>
 

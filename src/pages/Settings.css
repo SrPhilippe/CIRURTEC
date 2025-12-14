@@ -64,7 +64,8 @@
     color: #94a3b8;
 }
 
-.input-wrapper input {
+.input-wrapper input,
+.input-wrapper select {
     width: 100%;
     padding: 0.75rem 1rem 0.75rem 2.8rem;
     border: 1px solid #e2e8f0;
@@ -167,7 +168,7 @@
     .settings-container {
         padding: 1rem;
     }
-    
+
     .settings-card {
         padding: 1.5rem;
     }

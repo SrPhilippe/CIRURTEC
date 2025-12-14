@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { Users as UsersIcon, Search, Shield, ShieldAlert, User } from 'lucide-react';
+import { Users as UsersIcon, Search, Shield, ShieldAlert, User, UserPlus } from 'lucide-react';
 import './Users.css';
 
 const Users = () => {
+  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -46,14 +48,21 @@ const Users = () => {
           <h1>Gerenciamento de Usuários</h1>
         </div>
         
-        <div className="search-bar">
-          <Search size={20} />
-          <input 
-            type="text" 
-            placeholder="Buscar por nome ou e-mail..." 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        <div className="search-and-actions">
+          <div className="search-bar">
+            <Search size={20} />
+            <input 
+              type="text" 
+              placeholder="Buscar por nome ou e-mail..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          
+          <button className="btn-add-user" onClick={() => navigate('../admin/register')}>
+            <UserPlus size={20} />
+            Cadastrar Novo Usuário
+          </button>
         </div>
       </div>
 

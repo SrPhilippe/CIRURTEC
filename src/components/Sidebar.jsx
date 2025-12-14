@@ -15,7 +15,8 @@ import {
   List,
   Plus,
   ChevronDown,
-  LogOut
+  LogOut,
+  UserPlus
 } from 'lucide-react';
 import './Sidebar.css';
 
@@ -70,10 +71,12 @@ const Sidebar = () => {
     { 
       title: 'Usuários', 
       icon: Users, 
-      route: '/users', 
-      // Only show if user is ADMIN. 
-      // Note: Implementation plan said "This menu will have the list of all registered users."
-      hidden: user?.rights !== 'ADMIN'
+      isSubmenu: true,
+      hidden: user?.rights !== 'ADMIN',
+      subItems: [
+        { title: 'Lista de Usuários', icon: List, route: '/users' },
+        { title: 'Cadastrar Usuário', icon: UserPlus, route: '/admin/register' },
+      ]
     }, 
     { title: 'Configurações', icon: Settings, route: '/settings' }, // Enabled
     { title: 'Relatórios', icon: FileText, route: '/reports', disabled: true },

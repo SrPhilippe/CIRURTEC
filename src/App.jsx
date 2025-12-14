@@ -26,6 +26,8 @@ function App() {
                <Route path="/email-viagem" element={<TravelEmail />} />
                <Route path="/clientes/lista" element={<ClientesCadastrados />} />
                <Route path="/clientes/novo" element={<NovoCadastro />} />
+               <Route path="/clientes/editar/:id" element={<NovoCadastro />} />
+               <Route path="/clientes/:id" element={<NovoCadastro />} />
                <Route path="/settings" element={<Settings />} /> {/* Settings Route */}
              </Route>
           </Route>
