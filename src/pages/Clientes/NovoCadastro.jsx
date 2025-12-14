@@ -1,9 +1,16 @@
-import React, { useState } from 'react';
-import { Building2, Plus, Save, Trash2, Printer } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
+import { Building2, Plus, Save, Trash2, Printer, ArrowLeft } from 'lucide-react';
 import './Clientes.css';
 
 export default function NovoCadastro() {
+  const { id } = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isViewMode = !location.pathname.includes('/editar') && !!id;
+  const isEditMode = location.pathname.includes('/editar') && !!id;
+
   const [clientData, setClientData] = useState({
     cnpj: '',
     nomeHospital: '',
@@ -23,6 +30,40 @@ export default function NovoCadastro() {
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+
+  useEffect(() => {
+    if (id) {
+      fetchClientData(id);
+    }
+  }, [id]);
+
+  const fetchClientData = async (clientId) => {
+    try {
+      setLoading(true);
+      const response = await api.get(`/clients/${clientId}`);
+      const data = response.data;
+      
+      setClientData({
+        cnpj: data.cnpj,
+        nomeHospital: data.nome_hospital,
+        nomeFantasia: data.nome_fantasia || '',
+        email1: data.email1,
+        email2: data.email2 || '',
+        contato1: data.contato1,
+        contato2: data.contato2 || '',
+        tipoCliente: data.tipo_cliente
+      });
+
+      if (data.equipments && data.equipments.length > 0) {
+        setEquipments(data.equipments);
+      }
+    } catch (error) {
+      console.error('Error fetching client:', error);
+      setErrorMessage('Erro ao carregar dados do cliente.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const [loadingCnpj, setLoadingCnpj] = useState(false);
 
@@ -182,12 +223,19 @@ export default function NovoCadastro() {
     setLoading(true);
 
     try {
-      await api.post('/clients', {
-        clientData,
-        equipments
-      });
-
-      setSuccessMessage('Cliente cadastrado com sucesso!');
+      if (id) {
+        await api.put(`/clients/${id}`, {
+          clientData,
+          equipments
+        });
+        setSuccessMessage('Cliente atualizado com sucesso!');
+      } else {
+        await api.post('/clients', {
+          clientData,
+          equipments
+        });
+        setSuccessMessage('Cliente cadastrado com sucesso!');
+      }
       
       // Clear form
       setClientData({
@@ -204,7 +252,11 @@ export default function NovoCadastro() {
       setErrors({});
 
       // Clear success message after 5 seconds
-      setTimeout(() => setSuccessMessage(''), 5000);
+      // Clear success message after 5 seconds and redirect if edit/new
+      setTimeout(() => {
+        setSuccessMessage('');
+        if (id) navigate('/clientes/lista');
+      }, 2000);
 
     } catch (error) {
       console.error('Error saving client:', error);
@@ -219,7 +271,7 @@ export default function NovoCadastro() {
     <div className="clientes-container">
       <div className="page-header">
         <h1 className="page-title">
-          <Building2 size={32} /> Novo Cadastro de Cliente
+          <Building2 size={32} /> {isViewMode ? 'Visualizar Cliente' : isEditMode ? 'Editar Cliente' : 'Novo Cadastro de Cliente'}
         </h1>
         <div className="action-bar" style={{ marginTop: 0 }}>
              <button className="btn-secondary">
@@ -260,7 +312,7 @@ export default function NovoCadastro() {
                 maxLength={18}
                 placeholder="00.000.000/0000-00"
                 className={`form-input ${errors.cnpj ? 'input-error' : ''}`}
-                disabled={loadingCnpj}
+                disabled={loadingCnpj || isViewMode}
               />
               {errors.cnpj && <span className="error-text">{errors.cnpj}</span>}
             </div>
@@ -273,6 +325,7 @@ export default function NovoCadastro() {
                 value={clientData.nomeHospital}
                 onChange={handleClientChange}
                 required
+                disabled={isViewMode}
                 placeholder="Razão Social"
                 className={`form-input ${errors.nomeHospital ? 'input-error' : ''}`}
               />
@@ -287,6 +340,7 @@ export default function NovoCadastro() {
                 value={clientData.nomeFantasia}
                 onChange={handleClientChange}
                 placeholder="Nome Popular"
+                disabled={isViewMode}
                 className="form-input"
               />
             </div>
@@ -298,6 +352,7 @@ export default function NovoCadastro() {
                 value={clientData.tipoCliente}
                 onChange={handleClientChange}
                 required
+                disabled={isViewMode}
                 className="form-select"
               >
                 <option value="CEMIG">CEMIG</option>
@@ -314,6 +369,7 @@ export default function NovoCadastro() {
                 onChange={handleClientChange}
                 required
                 placeholder="admin@hospital.com"
+                disabled={isViewMode}
                 className={`form-input ${errors.email1 ? 'input-error' : ''}`}
               />
               {errors.email1 && <span className="error-text">{errors.email1}</span>}
@@ -327,6 +383,7 @@ export default function NovoCadastro() {
                 value={clientData.email2}
                 onChange={handleClientChange}
                 placeholder="financeiro@hospital.com"
+                disabled={isViewMode}
                 className={`form-input ${errors.email2 ? 'input-error' : ''}`}
               />
               {errors.email2 && <span className="error-text">{errors.email2}</span>}
@@ -341,6 +398,7 @@ export default function NovoCadastro() {
                 onChange={handleClientChange}
                 required
                 placeholder="(31) 99999-9999"
+                disabled={isViewMode}
                 className={`form-input ${errors.contato1 ? 'input-error' : ''}`}
               />
               {errors.contato1 && <span className="error-text">{errors.contato1}</span>}
@@ -354,6 +412,7 @@ export default function NovoCadastro() {
                 value={clientData.contato2}
                 onChange={handleClientChange}
                 placeholder="(31) 98888-8888"
+                disabled={isViewMode}
                 className="form-input"
               />
             </div>
@@ -384,6 +443,7 @@ export default function NovoCadastro() {
                         value={eq.equipamento}
                         onChange={(e) => handleEquipmentChange(eq.id, 'equipamento', e.target.value)}
                         placeholder="Ex: Termodesinfectora"
+                        disabled={isViewMode}
                         className={`table-input ${errors[`eq-${eq.id}-equipamento`] ? 'input-error' : ''}`}
                       />
                       {errors[`eq-${eq.id}-equipamento`] && <span className="error-text">{errors[`eq-${eq.id}-equipamento`]}</span>}
@@ -394,6 +454,7 @@ export default function NovoCadastro() {
                         value={eq.modelo}
                         onChange={(e) => handleEquipmentChange(eq.id, 'modelo', e.target.value)}
                         placeholder="Ex: XYZ-2000"
+                        disabled={isViewMode}
                         className={`table-input ${errors[`eq-${eq.id}-modelo`] ? 'input-error' : ''}`}
                       />
                       {errors[`eq-${eq.id}-modelo`] && <span className="error-text">{errors[`eq-${eq.id}-modelo`]}</span>}
@@ -404,6 +465,7 @@ export default function NovoCadastro() {
                         value={eq.numeroSerie}
                         onChange={(e) => handleEquipmentChange(eq.id, 'numeroSerie', e.target.value)}
                         placeholder="SN123456"
+                        disabled={isViewMode}
                         className="table-input"
                       />
                     </td>
@@ -414,12 +476,13 @@ export default function NovoCadastro() {
                         onChange={(e) => handleEquipmentChange(eq.id, 'dataNota', e.target.value)}
                         placeholder="DD/MM/AAAA"
                         maxLength={10}
+                        disabled={isViewMode}
                         className={`table-input ${errors[`eq-${eq.id}-dataNota`] ? 'input-error' : ''}`}
                       />
                       {errors[`eq-${eq.id}-dataNota`] && <span className="error-text">{errors[`eq-${eq.id}-dataNota`]}</span>}
                     </td>
                     <td>
-                      {equipments.length > 1 && (
+                      {equipments.length > 1 && !isViewMode && (
                         <button 
                           type="button" 
                           onClick={() => removeEquipment(eq.id)}
@@ -436,6 +499,7 @@ export default function NovoCadastro() {
             </table>
           </div>
 
+          {!isViewMode && (
           <button 
             type="button" 
             onClick={addEquipment}
@@ -443,14 +507,19 @@ export default function NovoCadastro() {
           >
             <Plus size={18} /> Adicionar mais equipamentos
           </button>
+          )}
         </div>
 
         {/* ACTIONS */}
         <div className="action-bar">
-          <button type="button" className="btn-secondary">Cancelar</button>
-          <button type="submit" className="btn-primary" disabled={loading}>
-            <Save size={18} /> {loading ? 'Salvando...' : 'Salvar Cadastro'}
+          <button type="button" className="btn-secondary" onClick={() => navigate('/clientes/lista')}>
+            <ArrowLeft size={18} /> Voltar
           </button>
+          {!isViewMode && (
+            <button type="submit" className="btn-primary" disabled={loading}>
+                <Save size={18} /> {loading ? 'Salvando...' : 'Salvar'}
+            </button>
+          )}
         </div>
 
       </form>

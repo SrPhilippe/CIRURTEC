@@ -85,10 +85,8 @@ export default function ClientesCadastrados() {
               <thead>
                 <tr>
                   <th>Nome do Hospital</th>
-                  <th>Nome Fantasia</th>
                   <th>CNPJ</th>
                   <th>Tipo</th>
-                  <th>Contato</th>
                   <th>Ações</th>
                 </tr>
               </thead>
@@ -97,14 +95,12 @@ export default function ClientesCadastrados() {
                   filteredClients.map(client => (
                     <tr key={client.id}>
                       <td className="font-medium">{client.nome_hospital}</td>
-                      <td>{client.nome_fantasia || '-'}</td>
                       <td>{client.cnpj}</td>
                       <td>
                         <span className={`badge badge-${client.tipo_cliente?.toLowerCase()}`}>
                           {client.tipo_cliente}
                         </span>
                       </td>
-                      <td>{client.contato1}</td>
                       <td>
                         <div className="action-buttons">
                           <button 
