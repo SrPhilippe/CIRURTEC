@@ -61,6 +61,9 @@ const RegisterUser = () => {
     }
 
     try {
+      // Artificial delay to show loading modal
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
       await register(formData.username, formData.email, formData.password, formData.role, formData.rights);
       setMessage({ type: 'success', text: 'Usuário registrado com sucesso!' });
       setFormData({
