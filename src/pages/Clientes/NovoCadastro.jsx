@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { Building2, Plus, Save, Trash2, Printer, ArrowLeft, Edit } from 'lucide-react';
@@ -48,11 +48,13 @@ export default function NovoCadastro() {
   const navigate = useNavigate();
   const isViewMode = !location.pathname.includes('/editar') && !!id;
   const isEditMode = location.pathname.includes('/editar') && !!id;
+  
+  const nomeHospitalRef = useRef(null); // Ref for "Nome do Hospital" (which is state.nomeFantasia)
 
   const [clientData, setClientData] = useState({
     cnpj: '',
-    nomeHospital: '',
-    nomeFantasia: '',
+    nomeHospital: '', // This will be "Razão Social"
+    nomeFantasia: '', // This will be "Nome do Hospital"
     email1: '',
     email2: '',
     contato1: '',
@@ -72,6 +74,22 @@ export default function NovoCadastro() {
   useEffect(() => {
     if (id) {
       fetchClientData(id);
+    } else {
+      // Reset form when entering "New Client" mode
+      setClientData({
+        cnpj: '',
+        nomeHospital: '',
+        nomeFantasia: '',
+        email1: '',
+        email2: '',
+        contato1: '',
+        contato2: '',
+        tipoCliente: 'CEMIG'
+      });
+      setEquipments([{ id: 1, equipamento: '', modelo: '', numeroSerie: '', dataNota: '' }]);
+      setErrors({});
+      setSuccessMessage('');
+      setErrorMessage('');
     }
   }, [id]);
 
@@ -127,14 +145,18 @@ export default function NovoCadastro() {
       
       setClientData(prev => ({
         ...prev,
-        nomeHospital: data.razao_social || '',
-        nomeFantasia: data.nome_fantasia || data.razao_social || '',
+        nomeHospital: data.razao_social || '', // Razão Social maps to nomeHospital
+        // nomeFantasia: '', // Keep empty or user managed (Nome do Hospital)
         email1: data.email || '',
-        email2: '', // API might not give secondary email neatly, usually main email
-        contato1: data.ddd_telefone_1 ? `(${data.ddd_telefone_1}) ${data.telefone_1}` : '',
-        contato2: data.ddd_telefone_2 ? `(${data.ddd_telefone_2}) ${data.telefone_2}` : '',
-        // Address could be added if you had address fields (cep, logradouro, etc.)
+        email2: '',
+        // contato1: '', // Do NOT populate contact
+        // contato2: '',
       }));
+
+      // Focus the "Nome do Hospital" input (which is mapped to nomeFantasia state)
+      if (nomeHospitalRef.current) {
+        nomeHospitalRef.current.focus();
+      }
 
     } catch (error) {
       console.error('Erro ao buscar CNPJ:', error);
@@ -153,6 +175,9 @@ export default function NovoCadastro() {
       .replace(/(\d{4})(\d)/, '$1-$2')
       .replace(/(-\d{2})\d+?$/, '$1');
   };
+
+  // ... (keeping other helpers same, reusing them from closure if possible or redefining but since this is a big block replace mostly, I need to check where I cut)
+  // Wait, I am replacing from line 1. So I need to include everything.
 
   const formatDate = (value) => {
     return value
@@ -173,8 +198,8 @@ export default function NovoCadastro() {
         if (!value) return 'CNPJ é obrigatório';
         if (value.length < 18) return 'CNPJ incompleto';
         return '';
-      case 'nomeHospital':
-        if (!value) return 'Nome do Hospital é obrigatório';
+      case 'nomeHospital': // Validating Razão Social
+        if (!value) return 'Razão Social é obrigatória';
         return '';
       case 'email1':
         if (!value) return 'E-mail 1 é obrigatório';
@@ -389,7 +414,7 @@ export default function NovoCadastro() {
                 </div>
                 
                 <div className="form-group">
-                  <label className="form-label">Nome do Hospital *</label>
+                  <label className="form-label">Razão Social *</label>
                   <input 
                     type="text" 
                     name="nomeHospital"
@@ -403,14 +428,15 @@ export default function NovoCadastro() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Nome Fantasia</label>
+                  <label className="form-label">Nome do Hospital</label>
                   <input 
                     type="text" 
                     name="nomeFantasia"
                     value={clientData.nomeFantasia}
                     onChange={handleClientChange}
-                    placeholder="Nome Popular"
+                    placeholder="Nome Popular / Fantasia"
                     className="form-input"
+                    ref={nomeHospitalRef}
                   />
                 </div>
 
@@ -579,11 +605,11 @@ export default function NovoCadastro() {
                     <div className="document-value">{clientData.cnpj || '-'}</div>
                 </div>
                 <div className="form-group">
-                    <label className="form-label">Nome do Hospital</label>
+                    <label className="form-label">Razão Social</label>
                     <div className="document-value">{clientData.nomeHospital || '-'}</div>
                 </div>
                 <div className="form-group">
-                    <label className="form-label">Nome Fantasia</label>
+                    <label className="form-label">Nome do Hospital</label>
                     <div className="document-value">{clientData.nomeFantasia || '-'}</div>
                 </div>
                 <div className="form-group">
