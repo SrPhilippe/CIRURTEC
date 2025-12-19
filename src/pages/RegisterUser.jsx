@@ -2,6 +2,7 @@ import React, { useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import api from '../services/api';
 import UsernameInput from '../components/UsernameInput';
+import LoadingModal from '../components/LoadingModal';
 import { Mail, Lock, Shield, UserPlus, AlertCircle, CheckCircle, Briefcase } from 'lucide-react';
 import './RegisterUser.css';
 
@@ -180,6 +181,7 @@ const RegisterUser = () => {
           </button>
         </form>
       </div>
+      <LoadingModal isOpen={loading} message="Registrando usuário..." />
     </div>
   );
 };

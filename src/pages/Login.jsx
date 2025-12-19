@@ -1,4 +1,5 @@
 import React, { useState, useContext } from 'react';
+import LoadingModal from '../components/LoadingModal';
 import logo from '../assets/images/logo-cirurtec.png';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
@@ -18,6 +19,9 @@ const Login = () => {
     setError('');
     setLoading(true);
     try {
+      // Artificial delay to show loading modal
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
       await login(usernameOrEmail, password);
       navigate('/'); // Redirect to home after login
     } catch (err) {
@@ -85,6 +89,7 @@ const Login = () => {
           </button>
         </form>
       </div>
+        <LoadingModal isOpen={loading} message="Acessando o sistema..." />
     </div>
   );
 };
