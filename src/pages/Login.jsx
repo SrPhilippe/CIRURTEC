@@ -1,4 +1,5 @@
 import React, { useState, useContext } from 'react';
+import logo from '../assets/images/logo-cirurtec.png';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { Lock, User, LogIn, AlertCircle, Shield } from 'lucide-react';
@@ -30,10 +31,7 @@ const Login = () => {
     <div className="login-container">
       <div className="login-card">
         <div className="login-header">
-            <div className="login-icon-wrapper">
-                <Shield size={32} />
-            </div>
-            <h2 className="login-title">CIRURTEC</h2>
+            <img src={logo} alt="Cirurtec Logo" className="login-logo" style={{ maxWidth: '180px', marginBottom: '1rem' }} />
             <p className="login-subtitle">Entre com suas credenciais para acessar</p>
         </div>
 

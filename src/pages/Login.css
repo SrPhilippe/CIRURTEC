@@ -62,6 +62,8 @@
 
 .form-group {
   position: relative;
+  gap: 0 !important;
+  align-items: flex-start !important;
 }
 
 .form-label {
@@ -76,6 +78,7 @@
   position: relative;
   display: flex;
   align-items: center;
+  margin-left: 0 !important;
 }
 
 .field-icon {
