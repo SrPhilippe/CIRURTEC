@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { User, Mail, Lock, Save, AlertCircle, CheckCircle } from 'lucide-react';
+import UsernameInput from '../components/UsernameInput';
+import api from '../services/api';
 import './Settings.css';
 
 const Settings = () => {
@@ -30,6 +32,11 @@ const Settings = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    
+    if (name === 'password' || name === 'confirmPassword') {
+        if (value.length > 24) return;
+    }
+
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -85,20 +92,11 @@ const Settings = () => {
         )}
 
         <form onSubmit={handleSubmit} className="settings-form">
-          <div className="form-group">
-            <label htmlFor="username">Usuário</label>
-            <div className="input-wrapper">
-              <User size={18} />
-              <input
-                type="text"
-                id="username"
-                name="username"
-                value={formData.username}
-                onChange={handleChange}
-                required
-              />
-            </div>
-          </div>
+          <UsernameInput 
+            value={formData.username} 
+            onChange={handleChange}
+            currentUsername={user?.username}
+          />
 
           <div className="form-group">
             <label htmlFor="email">E-mail</label>

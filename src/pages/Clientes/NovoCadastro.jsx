@@ -482,6 +482,8 @@ export default function NovoCadastro() {
                     required
                     placeholder="Razão Social"
                     className={`form-input ${errors.nomeHospital ? 'input-error' : ''}`}
+                    readOnly
+                    style={{ backgroundColor: '#f8fafc', cursor: 'not-allowed' }}
                   />
                   {errors.nomeHospital && <span className="error-text">{errors.nomeHospital}</span>}
                 </div>

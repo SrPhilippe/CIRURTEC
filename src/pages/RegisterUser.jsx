@@ -1,6 +1,8 @@
 import React, { useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import { User, Mail, Lock, Shield, UserPlus, AlertCircle, CheckCircle, Briefcase } from 'lucide-react';
+import api from '../services/api';
+import UsernameInput from '../components/UsernameInput';
+import { Mail, Lock, Shield, UserPlus, AlertCircle, CheckCircle, Briefcase } from 'lucide-react';
 import './RegisterUser.css';
 
 const RegisterUser = () => {
@@ -16,9 +18,15 @@ const RegisterUser = () => {
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
+    const { name, value } = e.target;
+    
+    if (name === 'password') {
+        if (value.length > 24) return;
+    }
+
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: value
     });
   };
 
@@ -27,6 +35,30 @@ const RegisterUser = () => {
     setLoading(true);
     setMessage({ type: '', text: '' });
     
+    // Username Validation
+    if (formData.username.length > 16) {
+        setMessage({ type: 'error', text: 'O nome de usuário deve ter no máximo 16 caracteres.' });
+        setLoading(false);
+        return;
+    }
+    if (/\s/.test(formData.username)) {
+        setMessage({ type: 'error', text: 'O nome de usuário não pode conter espaços.' });
+        setLoading(false);
+        return;
+    }
+    if (!/^[a-zA-Z0-9._-]+$/.test(formData.username)) {
+        setMessage({ type: 'error', text: 'O nome de usuário pode conter apenas letras, números, ponto (.), underline (_) e hífen (-).' });
+        setLoading(false);
+        return;
+    }
+
+    // Password Validation
+    if (formData.password.length > 24) {
+        setMessage({ type: 'error', text: 'A senha deve ter no máximo 24 caracteres.' });
+        setLoading(false);
+        return;
+    }
+
     try {
       await register(formData.username, formData.email, formData.password, formData.role, formData.rights);
       setMessage({ type: 'success', text: 'Usuário registrado com sucesso!' });
@@ -63,22 +95,10 @@ const RegisterUser = () => {
         )}
 
         <form onSubmit={handleSubmit} className="register-form">
-          <div className="form-group">
-            <label className="form-label" htmlFor="username">Nome de Usuário</label>
-            <div className="input-wrapper">
-              <User size={18} className="field-icon" />
-              <input
-                id="username"
-                type="text"
-                name="username"
-                className="form-input"
-                placeholder="Digite o nome de usuário"
-                value={formData.username}
-                onChange={handleChange}
-                required
-              />
-            </div>
-          </div>
+          <UsernameInput 
+            value={formData.username} 
+            onChange={handleChange} 
+          />
 
           <div className="form-group">
             <label className="form-label" htmlFor="email">E-mail</label>

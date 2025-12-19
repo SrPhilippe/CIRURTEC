@@ -6,6 +6,17 @@ import { verifyToken, verifyAdmin } from '../middleware/auth.js'
 
 const router = express.Router()
 
+// Check Username Availability
+router.get('/check-username/:username', verifyToken, async (req, res) => {
+    try {
+        const [users] = await pool.query('SELECT id FROM users WHERE username = ?', [req.params.username])
+        res.json({ exists: users.length > 0 })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ message: 'Error checking username' })
+    }
+})
+
 // Login
 router.post('/login', async (req, res) => {
     const { usernameOrEmail, password } = req.body
@@ -50,6 +61,12 @@ router.post('/login', async (req, res) => {
 // Register (Protected)
 router.post('/register', [verifyToken, verifyAdmin], async (req, res) => {
     const { username, email, password, role, rights } = req.body
+
+    // Validation
+    if (username.length > 16) return res.status(400).json({ message: 'Username max 16 characters' })
+    if (/\s/.test(username)) return res.status(400).json({ message: 'Username cannot contain spaces' })
+    if (!/^[a-zA-Z0-9._-]+$/.test(username)) return res.status(400).json({ message: 'Username contains invalid characters' })
+    if (password.length > 24) return res.status(400).json({ message: 'Password max 24 characters' })
 
     try {
         // Check if user exists
@@ -105,6 +122,12 @@ router.put('/users/:id', verifyToken, async (req, res) => {
     const userId = req.params.id
     const { username, email, password } = req.body
 
+    // Validation
+    if (username.length > 16) return res.status(400).json({ message: 'Username max 16 characters' })
+    if (/\s/.test(username)) return res.status(400).json({ message: 'Username cannot contain spaces' })
+    if (!/^[a-zA-Z0-9._-]+$/.test(username)) return res.status(400).json({ message: 'Username contains invalid characters' })
+    if (password && password.length > 24) return res.status(400).json({ message: 'Password max 24 characters' })
+
     // Ensure user is updating their own profile or is Admin
     // For now, let's strictly restrict to own profile mostly, or Admin can edit anyone?
     // Requirement says "menu de configurações, onde o mesmo poderá editar informações do seu perfil".
@@ -148,6 +171,28 @@ router.put('/users/:id', verifyToken, async (req, res) => {
     } catch (error) {
         console.error(error)
         res.status(500).json({ message: 'Error updating profile' })
+    }
+})
+
+// Delete User (Admin Only)
+router.delete('/users/:id', [verifyToken, verifyAdmin], async (req, res) => {
+    const userId = req.params.id
+
+    if (parseInt(userId) === req.user.id) {
+        return res.status(400).json({ message: 'You cannot delete your own account' })
+    }
+
+    try {
+        const [result] = await pool.query('DELETE FROM users WHERE id = ?', [userId])
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'User not found' })
+        }
+
+        res.json({ message: 'User deleted successfully' })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ message: 'Error deleting user' })
     }
 })
 

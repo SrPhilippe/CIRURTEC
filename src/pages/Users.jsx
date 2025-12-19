@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { Users as UsersIcon, Search, Shield, ShieldAlert, User, UserPlus } from 'lucide-react';
+import { Users as UsersIcon, Search, Shield, ShieldAlert, User, UserPlus, Edit } from 'lucide-react';
 import './Users.css';
 
 const Users = () => {
@@ -79,6 +79,7 @@ const Users = () => {
                 <th>E-mail</th>
                 <th>Cargo</th>
                 <th>Permissão</th>
+                <th>Ações</th>
                 <th>Data de Criação</th>
               </tr>
             </thead>
@@ -99,6 +100,18 @@ const Users = () => {
                         {getRoleIcon(user.rights)}
                         <span>{user.rights}</span>
                       </div>
+                    </td>
+                    <td>
+                      <button 
+                        className="btn-icon-action" 
+                        onClick={() => navigate(`/users/edit/${user.id}`)}
+                        title="Editar Usuário"
+                        style={{
+                            background: 'none', border: 'none', cursor: 'pointer', color: '#64748b'
+                        }}
+                      >
+                        <Edit size={18} />
+                      </button>
                     </td>
                     <td>{new Date(user.created_at).toLocaleDateString('pt-BR')}</td>
                   </tr>

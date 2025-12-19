@@ -11,6 +11,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 
 import Settings from './pages/Settings';
 import Users from './pages/Users';
+import EditUser from './pages/EditUser';
 
 function App() {
   return (
@@ -37,6 +38,7 @@ function App() {
              <Route element={<MainLayout />}>
                 <Route path="/admin/register" element={<RegisterUser />} />
                 <Route path="/users" element={<Users />} /> {/* Users Route */}
+                <Route path="/users/edit/:id" element={<EditUser />} />
              </Route>
           </Route>
 
