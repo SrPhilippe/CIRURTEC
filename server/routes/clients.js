@@ -90,11 +90,84 @@ router.post('/', verifyToken, async (req, res) => {
     }
 })
 
-// Get all clients
+// Check if CNPJ exists
+router.get('/check-cnpj/:cnpj', verifyToken, async (req, res) => {
+    try {
+        const cleanCNPJ = req.params.cnpj.replace(/\D/g, '') // Basic cleanup just in case
+        // We need to match how it's stored. The valid CNPJ in DB seems to be stored with mask based on formatCNPJ usage in frontend, 
+        // BUT wait. In `clients.js` line 32: `clientData.cnpj` is passed.
+        // In `NovoCadastro.jsx` `handleClientChange`: `formattedValue = formatCNPJ(value)`.
+        // So the DB likely stores formatted CNPJ "00.000.000/0000-00".
+        // However, the `fetchCNPJData` in frontend cleans it before sending to BrasilAPI.
+        // Let's check `NovoCadastro.jsx` again.
+        // Line 137: `const cleanCNPJ = cnpj.replace(/\D/g, '');` -> sends clean to BrasilAPI.
+        // Line 244: `formattedValue = formatCNPJ(value);` -> state stores formatted.
+        // Line 291 handleSubmit -> sends clientData.cnpj (formatted).
+        // So DB has formatted strings.
+        // My new endpoint should probably handle both or expect one. 
+        // Let's stick to expecting the value passed from frontend. 
+        // If frontend sends clean digits, I need to format it to query DB, OR I should strip DB columns for comparison (inefficient).
+        // Better: Frontend will likely send the clean digits to check, so I construct the formatted version here OR check 'LIKE' query?
+        // Actually, let's just make the frontend send the clean version to this endpoint, and I'll match it against the DB. 
+        // Wait, if DB stores formatted "XX.XXX.XXX/YYYY-ZZ", and I receive "XXXXXXXXYYYYZZ", I can't easily query.
+        // I should probably check if I can format it here.
+        // Re-reading `clients.js`:
+        /*
+           169:   const formatCNPJ = (value) => {
+           170:     return value
+           171:       .replace(/\D/g, '')
+           172:       .replace(/^(\d{2})(\d)/, '$1.$2')
+           ...
+        */
+        // I should duplicate this logic or flexible search. 
+        // Flexible search: `WHERE REPLACE(REPLACE(REPLACE(cnpj, '.', ''), '/', ''), '-', '') = ?`
+        // This is robust.
+
+        const [clients] = await pool.query(
+            "SELECT id FROM clients WHERE REPLACE(REPLACE(REPLACE(cnpj, '.', ''), '/', ''), '-', '') = ?",
+            [cleanCNPJ]
+        )
+
+        if (clients.length > 0) {
+            return res.json({ exists: true, id: clients[0].id })
+        }
+
+        res.json({ exists: false })
+    } catch (error) {
+        console.error('Error checking CNPJ:', error)
+        res.status(500).json({ message: 'Erro ao verificar CNPJ' })
+    }
+})
+
+// Get all clients with their equipment (for filtering)
 router.get('/', verifyToken, async (req, res) => {
     try {
-        const [clients] = await pool.query('SELECT * FROM clients ORDER BY created_at DESC')
-        res.json(clients)
+        const query = `
+            SELECT 
+                c.*, 
+                JSON_ARRAYAGG(
+                    JSON_OBJECT(
+                        'equipamento', e.equipamento, 
+                        'modelo', e.modelo, 
+                        'numero_serie', e.numero_serie
+                    )
+                ) as equipments_json 
+            FROM clients c 
+            LEFT JOIN equipments e ON c.id = e.client_id 
+            GROUP BY c.id 
+            ORDER BY c.created_at DESC
+        `
+        const [clients] = await pool.query(query)
+
+        // Parse JSON if the driver doesn't do it automatically (sometimes it comes as string)
+        const parsedClients = clients.map(client => ({
+            ...client,
+            equipments: typeof client.equipments_json === 'string'
+                ? JSON.parse(client.equipments_json)
+                : (client.equipments_json || [])
+        }))
+
+        res.json(parsedClients)
     } catch (error) {
         console.error('Error fetching clients:', error)
         res.status(500).json({ message: 'Erro ao buscar clientes' })

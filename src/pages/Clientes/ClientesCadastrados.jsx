@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Building2, Filter, Eye, Edit, Trash2, Search, Plus } from 'lucide-react';
+import { Building2, Filter, Eye, Edit, Trash2, Search, Plus, X, Eraser } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import './Clientes.css';
@@ -8,6 +8,19 @@ export default function ClientesCadastrados() {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Filter State
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [filters, setFilters] = useState({
+    cnpj: '',
+    nomeHospital: '', // nome_fantasia
+    razaoSocial: '', // nome_hospital
+    email: '',
+    equipamento: '',
+    numeroSerie: '',
+    modelo: ''
+  });
+
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
@@ -40,11 +53,72 @@ export default function ClientesCadastrados() {
     }
   };
 
-  const filteredClients = clients.filter(client => 
-    client.nome_hospital.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.cnpj.includes(searchTerm) ||
-    (client.nome_fantasia && client.nome_fantasia.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredClients = clients.filter(client => {
+    // 1. Text Search (Global)
+    const matchesSearch = 
+      client.nome_hospital.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      client.cnpj.includes(searchTerm) ||
+      (client.nome_fantasia && client.nome_fantasia.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    if (!matchesSearch) return false;
+
+    // 2. Advanced Filters
+    // CNPJ
+    if (filters.cnpj && !client.cnpj.includes(filters.cnpj)) return false;
+    
+    // Razão Social (nome_hospital)
+    if (filters.razaoSocial && !client.nome_hospital.toLowerCase().includes(filters.razaoSocial.toLowerCase())) return false;
+    
+    // Nome do Hospital (nome_fantasia)
+    if (filters.nomeHospital) {
+        if (!client.nome_fantasia) return false;
+        if (!client.nome_fantasia.toLowerCase().includes(filters.nomeHospital.toLowerCase())) return false;
+    }
+
+    // Email (checks 1 and 2)
+    if (filters.email) {
+        const emailFilter = filters.email.toLowerCase();
+        const email1 = client.email1 ? client.email1.toLowerCase() : '';
+        const email2 = client.email2 ? client.email2.toLowerCase() : '';
+        if (!email1.includes(emailFilter) && !email2.includes(emailFilter)) return false;
+    }
+
+    // Equipment Filters (Requires checking the equipments array)
+    if (filters.equipamento || filters.numeroSerie || filters.modelo) {
+        if (!client.equipments || client.equipments.length === 0) return false;
+        
+        // Check if ANY equipment matches ALL active equipment filters
+        const hasMatchingEquipment = client.equipments.some(eq => {
+            if (!eq) return false; // Safety check
+            let match = true;
+            if (filters.equipamento && (!eq.equipamento || !eq.equipamento.toLowerCase().includes(filters.equipamento.toLowerCase()))) match = false;
+            if (filters.modelo && (!eq.modelo || !eq.modelo.toLowerCase().includes(filters.modelo.toLowerCase()))) match = false;
+            if (filters.numeroSerie && (!eq.numero_serie || !eq.numero_serie.toLowerCase().includes(filters.numeroSerie.toLowerCase()))) match = false;
+            return match;
+        });
+
+        if (!hasMatchingEquipment) return false;
+    }
+
+    return true;
+  });
+
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setFilters(prev => ({ ...prev, [name]: value }));
+  };
+
+  const clearFilters = () => {
+    setFilters({
+        cnpj: '',
+        nomeHospital: '',
+        razaoSocial: '',
+        email: '',
+        equipamento: '',
+        numeroSerie: '',
+        modelo: ''
+    });
+  };
 
   return (
     <div className="clientes-container">
@@ -53,14 +127,22 @@ export default function ClientesCadastrados() {
           <Building2 size={32} /> Clientes Cadastrados
         </h1>
         <div className="action-bar" style={{ marginTop: 0 }}>
-             <button className="btn-secondary" onClick={() => navigate('/clientes/novo')}>
-                <Plus size={18} /> Novo Cliente
+             <button className="btn-add-client" onClick={() => navigate('/clientes/novo')}>
+                <Plus size={20} /> Novo Cliente
              </button>
         </div>
       </div>
 
       <div className="client-form-card">
         <div className="search-bar-container">
+          <button 
+                className={`btn-filter ${Object.values(filters).some(Boolean) ? 'active' : ''}`}
+                onClick={() => setShowFilterModal(true)}
+                title="Filtros Avançados"
+             >
+                <Filter size={20} />
+          </button>
+          
           <div className="input-wrapper">
              <Search size={20} className="field-icon" />
              <input 
@@ -72,6 +154,105 @@ export default function ClientesCadastrados() {
              />
           </div>
         </div>
+
+        {/* FILTER MODAL */}
+        {showFilterModal && (
+            <div className="filter-modal-overlay">
+                <div className="filter-modal">
+                    <div className="filter-modal-header">
+                        <h2>Filtrar Clientes</h2>
+                        <button className="close-btn" onClick={() => setShowFilterModal(false)}>
+                            <X size={20} />
+                        </button>
+                    </div>
+                    <div className="filter-modal-body">
+                        <div className="filter-grid">
+                             <div className="filter-group">
+                                <label>CNPJ</label>
+                                <input 
+                                    type="text" 
+                                    name="cnpj" 
+                                    value={filters.cnpj} 
+                                    onChange={handleFilterChange} 
+                                    placeholder="Digite o CNPJ"
+                                />
+                             </div>
+                             <div className="filter-group">
+                                <label>Nome do Hospital</label>
+                                <input 
+                                    type="text" 
+                                    name="nomeHospital" 
+                                    value={filters.nomeHospital} 
+                                    onChange={handleFilterChange} 
+                                    placeholder="Nome Fantasia"
+                                />
+                             </div>
+                             <div className="filter-group">
+                                <label>Razão Social</label>
+                                <input 
+                                    type="text" 
+                                    name="razaoSocial" 
+                                    value={filters.razaoSocial} 
+                                    onChange={handleFilterChange} 
+                                    placeholder="Razão Social"
+                                />
+                             </div>
+                             <div className="filter-group">
+                                <label>E-mail</label>
+                                <input 
+                                    type="text" 
+                                    name="email" 
+                                    value={filters.email} 
+                                    onChange={handleFilterChange} 
+                                    placeholder="Buscar em e-mails"
+                                />
+                             </div>
+                             
+                             <div className="filter-divider">Dados do Equipamento</div>
+
+                             <div className="filter-group">
+                                <label>Equipamento</label>
+                                <input 
+                                    type="text" 
+                                    name="equipamento" 
+                                    value={filters.equipamento} 
+                                    onChange={handleFilterChange} 
+                                    placeholder="Ex: Autoclave"
+                                />
+                             </div>
+                             <div className="filter-group">
+                                <label>Modelo</label>
+                                <input 
+                                    type="text" 
+                                    name="modelo" 
+                                    value={filters.modelo} 
+                                    onChange={handleFilterChange} 
+                                    placeholder="Ex: XYZ-123"
+                                />
+                             </div>
+                             <div className="filter-group">
+                                <label>Número de Série</label>
+                                <input 
+                                    type="text" 
+                                    name="numeroSerie" 
+                                    value={filters.numeroSerie} 
+                                    onChange={handleFilterChange} 
+                                    placeholder="Serial Number"
+                                />
+                             </div>
+                        </div>
+                    </div>
+                    <div className="filter-modal-footer">
+                        <button className="btn-secondary" onClick={clearFilters}>
+                            <Eraser size={16} /> Limpar
+                        </button>
+                        <button className="btn-primary" onClick={() => setShowFilterModal(false)}>
+                            Aplicar Filtros
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
 
         {error && <div className="alert alert-error">{error}</div>}
 

@@ -3,6 +3,11 @@ import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { Building2, Plus, Save, Trash2, Printer, ArrowLeft, Edit } from 'lucide-react';
 import './Clientes.css';
+import DatePicker, { registerLocale } from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { ptBR } from 'date-fns/locale';
+
+registerLocale('pt-BR', ptBR);
 
 // Helper functions (outside component or inside)
 const formatPhone = (value) => {
@@ -17,7 +22,7 @@ const formatPhone = (value) => {
   return digits;
 };
 
-const formatDate = (value) => {
+const maskDate = (value) => {
   const digits = value.replace(/\D/g, '').slice(0, 8);
   if (digits.length >= 5) {
       return digits.replace(/^(\d{2})(\d{2})(\d{0,4})/, '$1/$2/$3');
@@ -28,18 +33,14 @@ const formatDate = (value) => {
 };
 
 const isValidDate = (dateString) => {
-    // Expected format: DD/MM/YYYY
-    if (!/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) return false;
+    // Expected format: YYYY-MM-DD
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return false;
     
-    const [day, month, year] = dateString.split('/').map(Number);
-    
-    if (day < 1 || day > 31) return false;
-    if (month < 1 || month > 12) return false;
-    if (year < 1900 || year > 2100) return false;
-
-    // Simple check for days in month
-    const daysInMonth = new Date(year, month, 0).getDate();
-    return day <= daysInMonth;
+    // Check if it is a real date
+    const date = new Date(dateString);
+    const timestamp = date.getTime();
+    if (typeof timestamp !== 'number' || Number.isNaN(timestamp)) return false;
+    return date.toISOString().startsWith(dateString);
 };
 
 export default function NovoCadastro() {
@@ -116,7 +117,7 @@ export default function NovoCadastro() {
             equipamento: eq.equipamento,
             modelo: eq.modelo,
             numeroSerie: eq.numero_serie, // Map from snake_case
-            dataNota: eq.data_nota      // Map from snake_case
+            dataNota: (eq.data_nota && !isNaN(new Date(eq.data_nota).getTime())) ? new Date(eq.data_nota).toISOString().split('T')[0] : ''
         })));
       }
     } catch (error) {
@@ -133,8 +134,21 @@ export default function NovoCadastro() {
     setLoadingCnpj(true);
     setErrors(prev => ({ ...prev, cnpj: '' })); // Clear previous errors
     
+    const cleanCNPJ = cnpj.replace(/\D/g, '');
+
     try {
-      const cleanCNPJ = cnpj.replace(/\D/g, '');
+      // 1. Check local database first
+      const checkResponse = await api.get(`/clients/check-cnpj/${cleanCNPJ}`);
+      if (checkResponse.data.exists) {
+         // Redirect to existing client
+         navigate(`/clientes/${checkResponse.data.id}`);
+         // We might want to show a toast, but navigation usually clears it unless we use context/global state. 
+         // Since I don't have a global toast context visible here, I'll rely on the redirect making it obvious.
+         // Or I could pass state in navigation.
+         return; 
+      }
+
+      // 2. If not found, fetch from BrasilAPI
       const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cleanCNPJ}`);
       
       if (!response.ok) {
@@ -147,7 +161,7 @@ export default function NovoCadastro() {
         ...prev,
         nomeHospital: data.razao_social || '', // Razão Social maps to nomeHospital
         // nomeFantasia: '', // Keep empty or user managed (Nome do Hospital)
-        email1: data.email || '',
+        email1: data.email ? data.email.toLowerCase() : '',
         email2: '',
         // contato1: '', // Do NOT populate contact
         // contato2: '',
@@ -160,7 +174,7 @@ export default function NovoCadastro() {
 
     } catch (error) {
       console.error('Erro ao buscar CNPJ:', error);
-      setErrors(prev => ({ ...prev, cnpj: 'Erro ao buscar CNPJ. Verifique se está correto.' }));
+      setErrors(prev => ({ ...prev, cnpj: 'CNPJ inexistente ou inválido. Por favor, verifique o número digitado.' }));
     } finally {
       setLoadingCnpj(false);
     }
@@ -201,6 +215,9 @@ export default function NovoCadastro() {
       case 'nomeHospital': // Validating Razão Social
         if (!value) return 'Razão Social é obrigatória';
         return '';
+      case 'nomeFantasia': // Validating Nome do Hospital
+        if (!value) return 'Nome do Hospital é obrigatório';
+        return '';
       case 'email1':
         if (!value) return 'E-mail 1 é obrigatório';
         if (!validateEmail(value)) return 'E-mail inválido';
@@ -219,7 +236,8 @@ export default function NovoCadastro() {
         if (!value) return 'Obrigatório';
         return '';
       case 'dataNota':
-        if (value && value.length > 0 && value.length < 10) return 'Data incompleta';
+        if (!value) return 'Data da Nota é obrigatória';
+        if (!isValidDate(value)) return 'Data inválida';
         return '';
       default:
         return '';
@@ -230,10 +248,19 @@ export default function NovoCadastro() {
     const { name, value } = e.target;
     let formattedValue = value;
     
+    // Apply Uppercase to text fields
+    // emails usually standard lowercase, but kept as is or could be lower. 
+    // User asked "everything in uppercase". I will apply to text fields.
+    const isTextField = ['nomeHospital', 'nomeFantasia'].includes(name);
+
     if (name === 'cnpj') {
       formattedValue = formatCNPJ(value);
     } else if (name === 'contato1' || name === 'contato2') {
         formattedValue = formatPhone(value);
+    } else if (name === 'email1' || name === 'email2') {
+        formattedValue = value.toLowerCase();
+    } else if (isTextField) {
+        formattedValue = value.toUpperCase();
     }
 
     setClientData(prev => ({ ...prev, [name]: formattedValue }));
@@ -250,8 +277,24 @@ export default function NovoCadastro() {
   const handleEquipmentChange = (id, field, value) => {
     let formattedValue = value;
     
+    // Enforce Uppercase on equipment text fields
+    if (['equipamento', 'modelo', 'numeroSerie'].includes(field)) {
+        formattedValue = value.toUpperCase();
+    }
+
     if (field === 'dataNota') {
-      formattedValue = formatDate(value);
+        if (value instanceof Date) {
+            // value is a Date object from DatePicker
+            // Format to YYYY-MM-DD for storage
+            const year = value.getFullYear();
+            const month = String(value.getMonth() + 1).padStart(2, '0');
+            const day = String(value.getDate()).padStart(2, '0');
+            formattedValue = `${year}-${month}-${day}`;
+        } else if (value === null) {
+            formattedValue = '';
+        } else {
+             formattedValue = value;
+        }
     }
 
     setEquipments(prev => prev.map(eq => 
@@ -288,6 +331,22 @@ export default function NovoCadastro() {
     }
 
     // Validate equipment data
+    // Ensure at least one equipment is present (though the UI usually keeps one empty row, we need to ensure it's filled)
+    const hasValidEquipment = equipments.some(eq => eq.equipamento && eq.modelo && eq.dataNota);
+
+    if (!hasValidEquipment) {
+         setErrorMessage('É obrigatório cadastrar ao menos um equipamento completo (com data da nota).');
+         setLoading(false);
+         // Highlight empty fields of the first one
+         equipments.forEach((eq, index) => {
+            ['equipamento', 'modelo', 'dataNota'].forEach(field => {
+                if (!eq[field]) newErrors[`eq-${eq.id}-${field}`] = validateField(field, '');
+            });
+         });
+         setErrors(prev => ({...prev, ...newErrors}));
+         return; 
+    }
+
     equipments.forEach((eq, index) => {
         const eqFields = ['equipamento', 'modelo', 'numeroSerie', 'dataNota'];
         eqFields.forEach(field => {
@@ -298,13 +357,13 @@ export default function NovoCadastro() {
         });
         // Validate Dates
         if (eq.dataNota && !isValidDate(eq.dataNota)) {
-            newErrors[`eq-${eq.id}-dataNota`] = 'Data inválida (DD/MM/AAAA)';
+            newErrors[`eq-${eq.id}-dataNota`] = 'Data inexistente';
         }
     });
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      setErrorMessage('Por favor, corrija os erros no formulário.');
+      setErrorMessage('Por favor, corrija os erros no formulário (verifique datas e campos obrigatórios).');
       setLoading(false);
       return;
     }
@@ -557,13 +616,18 @@ export default function NovoCadastro() {
                           />
                         </td>
                         <td>
-                          <input 
-                            type="text" 
-                            value={eq.dataNota}
-                            onChange={(e) => handleEquipmentChange(eq.id, 'dataNota', e.target.value)}
-                            placeholder="DD/MM/AAAA"
-                            maxLength={10}
+                          <DatePicker
+                            selected={eq.dataNota ? new Date(eq.dataNota + 'T00:00:00') : null}
+                            onChange={(date) => handleEquipmentChange(eq.id, 'dataNota', date)}
+                            onChangeRaw={(e) => {
+                                const masked = maskDate(e.target.value);
+                                e.target.value = masked;
+                            }}
+                            dateFormat="dd/MM/yyyy"
+                            locale="pt-BR"
+                            placeholderText="DD/MM/AAAA"
                             className={`table-input ${errors[`eq-${eq.id}-dataNota`] ? 'input-error' : ''}`}
+                            wrapperClassName="w-full"
                           />
                           {errors[`eq-${eq.id}-dataNota`] && <span className="error-text">{errors[`eq-${eq.id}-dataNota`]}</span>}
                         </td>
