@@ -723,7 +723,7 @@ export default function NovoCadastro() {
                         <td>{eq.equipamento || '-'}</td>
                         <td>{eq.modelo || '-'}</td>
                         <td>{eq.numeroSerie || '-'}</td>
-                        <td>{eq.dataNota || '-'}</td>
+                        <td>{eq.dataNota ? eq.dataNota.split('-').reverse().join('/') : '-'}</td>
                       </tr>
                     ))}
                   </tbody>
