@@ -142,6 +142,27 @@
     cursor: not-allowed;
 }
 
+.settings-card .btn-secondary {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    background-color: transparent;
+    border: 1px solid #e2e8f0;
+    color: #64748b;
+    font-size: 1rem;
+    margin-top: 1rem;
+}
+
+.settings-card .btn-secondary:hover {
+    background-color: #f1f5f9;
+    color: #1e293b;
+}
+
 .status-message {
     display: flex;
     align-items: center;

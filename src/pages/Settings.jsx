@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { User, Mail, Lock, Save, AlertCircle, CheckCircle } from 'lucide-react';
-import UsernameInput from '../components/UsernameInput';
+import { UsernameInput, EmailInput, PasswordInput } from '../components/FormInputs';
 import api from '../services/api';
 import './Settings.css';
 
@@ -98,54 +99,33 @@ const Settings = () => {
             currentUsername={user?.username}
           />
 
-          <div className="form-group">
-            <label htmlFor="email">E-mail</label>
-            <div className="input-wrapper">
-              <Mail size={18} />
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-              />
-            </div>
-          </div>
+          <EmailInput 
+            value={formData.email}
+            onChange={handleChange}
+            currentEmail={user?.email}
+          />
 
           <div className="divider">
             <span>Alterar Senha (Opcional)</span>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="password">Nova Senha</label>
-            <div className="input-wrapper">
-              <Lock size={18} />
-              <input
-                type="password"
-                id="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="Deixe em branco para manter a atual"
-              />
-            </div>
-          </div>
+          <PasswordInput 
+            name="password"
+            label="Nova Senha"
+            placeholder="Deixe em branco para manter a atual"
+            value={formData.password}
+            onChange={handleChange}
+            required={false}
+          />
 
-          <div className="form-group">
-            <label htmlFor="confirmPassword">Confirmar Nova Senha</label>
-            <div className="input-wrapper">
-              <Lock size={18} />
-              <input
-                type="password"
-                id="confirmPassword"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                placeholder="Digite a nova senha novamente"
-              />
-            </div>
-          </div>
+          <PasswordInput 
+            name="confirmPassword"
+            label="Confirmar Nova Senha"
+            placeholder="Digite a nova senha novamente"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            required={false}
+          />
 
           <div className="form-info">
              <p><strong>Cargo:</strong> {user?.role || 'N/A'}</p>

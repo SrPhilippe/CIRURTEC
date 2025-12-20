@@ -1,7 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import api from '../services/api';
-import UsernameInput from '../components/UsernameInput';
+import { UsernameInput, EmailInput, PasswordInput } from '../components/FormInputs';
 import LoadingModal from '../components/LoadingModal';
 import { Mail, Lock, Shield, UserPlus, AlertCircle, CheckCircle, Briefcase } from 'lucide-react';
 import './RegisterUser.css';
@@ -104,39 +104,15 @@ const RegisterUser = () => {
             onChange={handleChange} 
           />
 
-          <div className="form-group">
-            <label className="form-label" htmlFor="email">E-mail</label>
-            <div className="input-wrapper">
-              <Mail size={18} className="field-icon" />
-              <input
-                id="email"
-                type="email"
-                name="email"
-                className="form-input"
-                placeholder="Digite o e-mail"
-                value={formData.email}
-                onChange={handleChange}
-                required
-              />
-            </div>
-          </div>
+          <EmailInput 
+            value={formData.email}
+            onChange={handleChange}
+          />
 
-          <div className="form-group">
-            <label className="form-label" htmlFor="password">Senha</label>
-            <div className="input-wrapper">
-              <Lock size={18} className="field-icon" />
-              <input
-                id="password"
-                type="password"
-                name="password"
-                className="form-input"
-                placeholder="Digite a senha"
-                value={formData.password}
-                onChange={handleChange}
-                required
-              />
-            </div>
-          </div>
+          <PasswordInput
+             value={formData.password}
+             onChange={handleChange}
+          />
 
           <div className="form-group">
             <label className="form-label" htmlFor="role">Cargo</label>

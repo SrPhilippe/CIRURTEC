@@ -597,7 +597,8 @@
     border-bottom: 1px solid var(--border);
     min-height: 2.5rem;
     display: flex;
-    align-items: center;
+    width: 100%;
+    flex: 1;
 }
 
 .document-value .badge {

@@ -17,6 +17,17 @@ router.get('/check-username/:username', verifyToken, async (req, res) => {
     }
 })
 
+// Check Email Availability
+router.get('/check-email/:email', verifyToken, async (req, res) => {
+    try {
+        const [users] = await pool.query('SELECT id FROM users WHERE email = ?', [req.params.email])
+        res.json({ exists: users.length > 0 })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ message: 'Error checking email' })
+    }
+})
+
 // Login
 router.post('/login', async (req, res) => {
     const { usernameOrEmail, password } = req.body

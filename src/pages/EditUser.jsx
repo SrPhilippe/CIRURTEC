@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import UsernameInput from '../components/UsernameInput';
+import { UsernameInput, EmailInput, PasswordInput } from '../components/FormInputs';
 import { User, Mail, Lock, Save, AlertCircle, CheckCircle, Trash2, X, ArrowLeft } from 'lucide-react';
 import './Settings.css'; // Reusing settings styles
 
@@ -144,10 +144,7 @@ const EditUser = () => {
   return (
     <div className="settings-container">
       <div className="settings-card">
-        <div className="settings-header" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <button onClick={() => navigate('/users')} className="btn-icon" style={{color: 'white'}}>
-             <ArrowLeft size={24} />
-          </button>
+        <div className="settings-header" style={{ display: 'flex', alignItems: 'center', gap: '1rem', justifyContent: 'center' }}>
           <div>
               <h1>Editar Usuário</h1>
               <p>Gerencie as informações desta conta</p>
@@ -168,54 +165,33 @@ const EditUser = () => {
             currentUsername={originalUsername}
           />
 
-          <div className="form-group">
-            <label htmlFor="email">E-mail</label>
-            <div className="input-wrapper">
-              <Mail size={18} />
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-              />
-            </div>
-          </div>
+          <EmailInput
+            value={formData.email}
+            onChange={handleChange}
+            currentEmail={formData.email} // Pass current email here if available, but for Edit logic we might need 'originalEmail'
+          />
 
           <div className="divider">
             <span>Alterar Senha (Opcional)</span>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="password">Nova Senha</label>
-            <div className="input-wrapper">
-              <Lock size={18} />
-              <input
-                type="password"
-                id="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="Deixe em branco para manter a atual"
-              />
-            </div>
-          </div>
+          <PasswordInput 
+            name="password"
+            label="Nova Senha"
+            placeholder="Deixe em branco para manter a atual"
+            value={formData.password}
+            onChange={handleChange}
+            required={false}
+          />
 
-          <div className="form-group">
-            <label htmlFor="confirmPassword">Confirmar Nova Senha</label>
-            <div className="input-wrapper">
-              <Lock size={18} />
-              <input
-                type="password"
-                id="confirmPassword"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                placeholder="Digite a nova senha novamente"
-              />
-            </div>
-          </div>
+          <PasswordInput 
+            name="confirmPassword"
+            label="Confirmar Nova Senha"
+            placeholder="Digite a nova senha novamente"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            required={false}
+          />
 
           <div className="form-info">
              <p><strong>Cargo Atual:</strong> {formData.role}</p>
@@ -224,19 +200,24 @@ const EditUser = () => {
 
           <div className="form-actions" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2rem' }}>
              <button type="button" className="btn-delete-account" onClick={() => setShowDeleteModal(true)} style={{
-                 backgroundColor: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5', padding: '0.75rem 1.5rem', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem'
+                 backgroundColor: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5', padding: '0.75rem 1.5rem', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '1rem'
              }}>
                 <Trash2 size={18} /> Excluir Conta
              </button>
              
-             <button type="submit" className="save-btn" disabled={loading}>
-                {loading ? 'Salvando...' : (
-                <>
-                    <Save size={20} />
-                    Salvar Alterações
-                </>
-                )}
-            </button>
+             <div style={{ display: 'flex', gap: '1rem' }}>
+                <button type="button" className="btn-secondary" onClick={() => navigate('/users')}>
+                    <ArrowLeft size={20} /> Voltar
+                </button>
+                <button type="submit" className="save-btn" disabled={loading}>
+                    {loading ? 'Salvando...' : (
+                    <>
+                        <Save size={20} />
+                        Salvar Alterações
+                    </>
+                    )}
+                </button>
+             </div>
           </div>
         </form>
       </div>
