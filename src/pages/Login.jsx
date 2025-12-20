@@ -10,22 +10,74 @@ const Login = () => {
   const [usernameOrEmail, setUsernameOrEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [validationError, setValidationError] = useState('');
   const { login } = useContext(AuthContext);
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+
+  const handleUsernameChange = (e) => {
+    const value = e.target.value;
+    setValidationError('');
+    
+    // If it looks like a username (not email), apply username rules
+    if (!value.includes('@')) {
+      // Max 16 characters
+      if (value.length > 16) {
+        setValidationError('Nome de usuário deve ter no máximo 16 caracteres.');
+        return;
+      }
+      // No spaces
+      if (/\s/.test(value)) {
+        setValidationError('Nome de usuário não pode conter espaços.');
+        return;
+      }
+      // Valid characters only
+      if (value !== '' && !/^[a-zA-Z0-9._@-]+$/.test(value)) {
+        setValidationError('Caracteres inválidos no nome de usuário.');
+        return;
+      }
+    }
+    
+    setUsernameOrEmail(value);
+  };
+
+  const handlePasswordChange = (e) => {
+    const value = e.target.value;
+    setValidationError('');
+    
+    // Max 24 characters
+    if (value.length > 24) {
+      setValidationError('Senha deve ter no máximo 24 caracteres.');
+      return;
+    }
+    
+    setPassword(value);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
+    
+    const startTime = Date.now();
+    const minLoadTime = 1000;
+
     try {
-      // Artificial delay to show loading modal
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
       await login(usernameOrEmail, password);
+      
+      const elapsed = Date.now() - startTime;
+      if (elapsed < minLoadTime) {
+        await new Promise(resolve => setTimeout(resolve, minLoadTime - elapsed));
+      }
+
       navigate('/'); // Redirect to home after login
     } catch (err) {
       setError('Falha no login. Verifique suas credenciais.');
+      // If error, we also need to respect min time if we want consistent UX, 
+      // or just let it close fast? Usually fast fail is fine, or consistent.
+      // Let's keep error fast for now, or user waits for nothing.
+      // But LoadingModal internal logic will handle the "visual" duration if we keep isOpen=true?
+      // No, we set loading=false in finally.
     } finally {
       setLoading(false);
     }
@@ -45,6 +97,13 @@ const Login = () => {
                 <span>{error}</span>
             </div>
         )}
+        
+        {validationError && (
+            <div className="error-message">
+                <AlertCircle size={18} />
+                <span>{validationError}</span>
+            </div>
+        )}
 
         <form onSubmit={handleSubmit} className="login-form">
           <div className="form-group">
@@ -57,7 +116,7 @@ const Login = () => {
                 className="form-input"
                 placeholder="Digite seu usuário ou e-mail"
                 value={usernameOrEmail}
-                onChange={(e) => setUsernameOrEmail(e.target.value)}
+                onChange={handleUsernameChange}
                 required
               />
             </div>
@@ -72,7 +131,7 @@ const Login = () => {
                 className="form-input"
                 placeholder="Digite sua senha"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={handlePasswordChange}
                 required
               />
             </div>
@@ -89,7 +148,7 @@ const Login = () => {
           </button>
         </form>
       </div>
-        <LoadingModal isOpen={loading} message="Acessando o sistema..." />
+        <LoadingModal isOpen={loading} minDuration={50} message="Acessando o sistema..." />
     </div>
   );
 };

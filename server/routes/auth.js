@@ -133,10 +133,12 @@ router.put('/users/:id', verifyToken, async (req, res) => {
     const userId = req.params.id
     const { username, email, password } = req.body
 
-    // Validation
-    if (username.length > 16) return res.status(400).json({ message: 'Username max 16 characters' })
-    if (/\s/.test(username)) return res.status(400).json({ message: 'Username cannot contain spaces' })
-    if (!/^[a-zA-Z0-9._-]+$/.test(username)) return res.status(400).json({ message: 'Username contains invalid characters' })
+    // Validation - only validate if fields are provided
+    if (username !== undefined) {
+        if (username.length > 16) return res.status(400).json({ message: 'Username max 16 characters' })
+        if (/\s/.test(username)) return res.status(400).json({ message: 'Username cannot contain spaces' })
+        if (!/^[a-zA-Z0-9._-]+$/.test(username)) return res.status(400).json({ message: 'Username contains invalid characters' })
+    }
     if (password && password.length > 24) return res.status(400).json({ message: 'Password max 24 characters' })
 
     // Ensure user is updating their own profile or is Admin
@@ -150,10 +152,20 @@ router.put('/users/:id', verifyToken, async (req, res) => {
     }
 
     try {
+        // Get current user data
+        const [currentUser] = await pool.query('SELECT username, email FROM users WHERE id = ?', [userId])
+        if (currentUser.length === 0) {
+            return res.status(404).json({ message: 'User not found' })
+        }
+
+        // Use current values if not provided
+        const finalUsername = username !== undefined ? username : currentUser[0].username
+        const finalEmail = email !== undefined ? email : currentUser[0].email
+
         // Check if username/email already exists (excluding current user)
         const [existing] = await pool.query(
             'SELECT * FROM users WHERE (username = ? OR email = ?) AND id != ?',
-            [username, email, userId]
+            [finalUsername, finalEmail, userId]
         )
 
         if (existing.length > 0) {
@@ -161,7 +173,7 @@ router.put('/users/:id', verifyToken, async (req, res) => {
         }
 
         let query = 'UPDATE users SET username = ?, email = ?'
-        let params = [username, email]
+        let params = [finalUsername, finalEmail]
 
         if (password) {
             const hashedPassword = bcrypt.hashSync(password, 8)

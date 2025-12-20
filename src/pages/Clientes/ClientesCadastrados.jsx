@@ -1,16 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Building2, Filter, Eye, Edit, Trash2, Search, Plus, X, Eraser } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
+import { AuthContext } from '../../context/AuthContext';
+import { checkPermission, PERMISSIONS } from '../../utils/permissions';
 import './Clientes.css';
 
 export default function ClientesCadastrados() {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const { user: currentUser, loading: authLoading } = useContext(AuthContext); // Get authLoading
   
   // Filter State
   const [showFilterModal, setShowFilterModal] = useState(false);
+  // ... (rest of state)
   const [filters, setFilters] = useState({
     cnpj: '',
     nomeHospital: '', // nome_fantasia
@@ -42,6 +46,12 @@ export default function ClientesCadastrados() {
   };
 
   const handleDelete = async (id) => {
+    // Double check permission before confirmed action
+    if (!checkPermission(currentUser, PERMISSIONS.DELETE_CLIENT)) {
+        alert('Você não tem permissão para excluir clientes.');
+        return;
+    }
+
     if (window.confirm('Tem certeza que deseja excluir este cliente?')) {
       try {
         await api.delete(`/clients/${id}`);
@@ -119,6 +129,10 @@ export default function ClientesCadastrados() {
         modelo: ''
     });
   };
+
+  const canDeleteClient = checkPermission(currentUser, PERMISSIONS.DELETE_CLIENT);
+  
+  if (authLoading) return <div className="loading-container"><p>Carregando permissões...</p></div>;
 
   return (
     <div className="clientes-container">
@@ -298,13 +312,15 @@ export default function ClientesCadastrados() {
                           >
                             <Edit size={18} />
                           </button>
-                          <button 
-                            className="btn-icon btn-delete" 
-                            title="Excluir"
-                            onClick={() => handleDelete(client.id)}
-                          >
-                            <Trash2 size={18} />
-                          </button>
+                          {canDeleteClient && (
+                              <button 
+                                className="btn-icon btn-delete" 
+                                title="Excluir"
+                                onClick={() => handleDelete(client.id)}
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                          )}
                         </div>
                       </td>
                     </tr>

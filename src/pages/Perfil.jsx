@@ -4,10 +4,10 @@ import { AuthContext } from '../context/AuthContext';
 import { User, Mail, Lock, Save, AlertCircle, CheckCircle } from 'lucide-react';
 import { UsernameInput, EmailInput, PasswordInput } from '../components/FormInputs';
 import api from '../services/api';
-import './Settings.css';
+import './Perfil.css';
 
-const Settings = () => {
-  const { user, updateProfile } = useContext(AuthContext);
+const Perfil = () => {
+  const { user, updateProfile, loading: authLoading } = useContext(AuthContext);
   
   const [formData, setFormData] = useState({
     username: '',
@@ -18,6 +18,8 @@ const Settings = () => {
   
   const [status, setStatus] = useState({ type: '', message: '' });
   const [loading, setLoading] = useState(false);
+
+
 
   useEffect(() => {
     if (user && user.username) {
@@ -76,12 +78,14 @@ const Settings = () => {
     }
   };
 
+  if (authLoading) return <div className="loading-state">Carregando informações...</div>;
+  
   return (
     <div className="settings-container">
       <div className="settings-card">
         <div className="settings-header">
           <User size={32} className="settings-icon" />
-          <h1>Configurações do Perfil</h1>
+          <h1>Meu Perfil</h1>
           <p>Gerencie suas informações pessoais</p>
         </div>
 
@@ -146,4 +150,4 @@ const Settings = () => {
   );
 };
 
-export default Settings;
+export default Perfil;

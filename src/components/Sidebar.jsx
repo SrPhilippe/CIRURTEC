@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
-  Home, 
+  Home,
+  User,
   ChevronLeft, 
   ChevronRight, 
   Car, 
@@ -22,8 +23,8 @@ import './Sidebar.css';
 
 import { useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
-// ... (imports remain mostly same, just added useContext and AuthContext)
- 
+import { checkPermission, PERMISSIONS } from '../utils/permissions';
+
 
 const Sidebar = () => {
   const { user, logout } = useContext(AuthContext); // Get user and logout
@@ -57,6 +58,7 @@ const Sidebar = () => {
   };
 
   const menuItems = [
+    { title: 'Perfil', icon: User, route: '/perfil' },
     { title: 'Início', icon: Home, route: '/', exact: true },
     { title: 'Viagens', icon: Car, route: '/email-viagem' },
     { 
@@ -72,13 +74,12 @@ const Sidebar = () => {
       title: 'Usuários', 
       icon: Users, 
       isSubmenu: true,
-      hidden: user?.rights !== 'ADMIN',
+      hidden: !checkPermission(user, PERMISSIONS.MANAGE_USERS),
       subItems: [
         { title: 'Lista de Usuários', icon: List, route: '/users' },
         { title: 'Cadastrar Usuário', icon: UserPlus, route: '/admin/register' },
       ]
     }, 
-    { title: 'Configurações', icon: Settings, route: '/settings' }, // Enabled
     { title: 'Relatórios', icon: FileText, route: '/reports', disabled: true },
     { title: 'Dashboard', icon: BarChart, route: '/dashboard', disabled: true },
     { title: 'Ajuda', icon: HelpCircle, route: '/help', disabled: true },

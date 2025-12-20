@@ -4,12 +4,15 @@ import api from '../services/api';
 import useDebounce from '../hooks/useDebounce';
 
 // --- UsernameInput ---
-export const UsernameInput = ({ value, onChange, currentUsername, required = true }) => {
+export const UsernameInput = ({ value, onChange, currentUsername, required = true, disabled = false }) => {
   const [usernameAvailable, setUsernameAvailable] = useState(null);
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const debouncedUsername = useDebounce(value, 500);
 
   useEffect(() => {
+    // If disabled, don't check
+    if (disabled) return;
+    
     const checkUsername = async () => {
       // If empty, or same as current (for edits), skip check
       if (!debouncedUsername || (currentUsername && debouncedUsername === currentUsername)) {
@@ -36,7 +39,7 @@ export const UsernameInput = ({ value, onChange, currentUsername, required = tru
     };
 
     checkUsername();
-  }, [debouncedUsername, currentUsername]);
+  }, [debouncedUsername, currentUsername, disabled]);
 
   const handleChange = (e) => {
     const newVal = e.target.value;
@@ -67,19 +70,21 @@ export const UsernameInput = ({ value, onChange, currentUsername, required = tru
           value={value}
           onChange={handleChange}
           required={required}
+          disabled={disabled}
+          style={disabled ? { backgroundColor: '#f1f5f9', cursor: 'not-allowed' } : {}}
         />
       </div>
-      {isCheckingUsername && (
+      {!disabled && isCheckingUsername && (
         <span style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '4px', display: 'block' }}>
           Verificando disponibilidade...
         </span>
       )}
-      {!isCheckingUsername && usernameAvailable === true && (
+      {!disabled && !isCheckingUsername && usernameAvailable === true && (
         <span style={{ fontSize: '0.8rem', color: '#16a34a', marginTop: '4px', display: 'block' }}>
           ✓ Disponível
         </span>
       )}
-      {!isCheckingUsername && usernameAvailable === false && (
+      {!disabled && !isCheckingUsername && usernameAvailable === false && (
         <span style={{ fontSize: '0.8rem', color: '#dc2626', marginTop: '4px', display: 'block' }}>
           ✕ Indisponível
         </span>
@@ -89,12 +94,14 @@ export const UsernameInput = ({ value, onChange, currentUsername, required = tru
 };
 
 // --- EmailInput ---
-export const EmailInput = ({ value, onChange, currentEmail, required = true }) => {
+export const EmailInput = ({ value, onChange, currentEmail, required = true, disabled = false }) => {
   const [emailAvailable, setEmailAvailable] = useState(null);
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const debouncedEmail = useDebounce(value, 800); // Slightly longer debounce for email
 
   useEffect(() => {
+    if (disabled) return;
+
     const checkEmail = async () => {
       if (!debouncedEmail || (currentEmail && debouncedEmail === currentEmail)) {
         setEmailAvailable(null);
@@ -121,7 +128,7 @@ export const EmailInput = ({ value, onChange, currentEmail, required = true }) =
     };
 
     checkEmail();
-  }, [debouncedEmail, currentEmail]);
+  }, [debouncedEmail, currentEmail, disabled]);
 
   const handleChange = (e) => {
     setEmailAvailable(null);
@@ -142,19 +149,21 @@ export const EmailInput = ({ value, onChange, currentEmail, required = true }) =
           value={value}
           onChange={handleChange}
           required={required}
+          disabled={disabled}
+          style={disabled ? { backgroundColor: '#f1f5f9', cursor: 'not-allowed' } : {}}
         />
       </div>
-      {isCheckingEmail && (
+      {!disabled && isCheckingEmail && (
         <span style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '4px', display: 'block' }}>
           Verificando disponibilidade...
         </span>
       )}
-      {!isCheckingEmail && emailAvailable === true && (
+      {!disabled && !isCheckingEmail && emailAvailable === true && (
         <span style={{ fontSize: '0.8rem', color: '#16a34a', marginTop: '4px', display: 'block' }}>
           ✓ Disponível
         </span>
       )}
-      {!isCheckingEmail && emailAvailable === false && (
+      {!disabled && !isCheckingEmail && emailAvailable === false && (
         <span style={{ fontSize: '0.8rem', color: '#dc2626', marginTop: '4px', display: 'block' }}>
           ✕ Indisponível
         </span>

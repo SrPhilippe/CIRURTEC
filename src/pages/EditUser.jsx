@@ -1,13 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { UsernameInput, EmailInput, PasswordInput } from '../components/FormInputs';
 import { User, Mail, Lock, Save, AlertCircle, CheckCircle, Trash2, X, ArrowLeft } from 'lucide-react';
-import './Settings.css'; // Reusing settings styles
+import { AuthContext } from '../context/AuthContext'; 
+import { checkPermission, PERMISSIONS, ROLES } from '../utils/permissions';
+import './Perfil.css'; // Reusing settings styles
 
 const EditUser = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user: currentUser, loading: authLoading } = useContext(AuthContext);
   
   const [formData, setFormData] = useState({
     username: '',
@@ -15,7 +18,7 @@ const EditUser = () => {
     password: '',
     confirmPassword: '',
     role: '',
-    rights: ''
+    rights: '' // Legacy mapping, we might update this based on role
   });
   
   const [status, setStatus] = useState({ type: '', message: '' });
@@ -35,11 +38,6 @@ const EditUser = () => {
 
   const fetchUser = async () => {
     try {
-        // Admin gets all users, we filter client side or ideally Fetch Single User endpoint?
-        // The endpoint /auth/users returns all users. 
-        // /auth/me returns current.
-        // I'll use /auth/users and find by ID for now since I didn't add GET /users/:id. 
-        // Wait, I should probably use the existing GET /users list and find local, or fetch fresh list.
         const response = await api.get('/auth/users');
         const user = response.data.find(u => u.id === parseInt(id));
         
@@ -51,7 +49,7 @@ const EditUser = () => {
                 password: '',
                 confirmPassword: '',
                 role: user.role,
-                rights: user.rights
+                rights: user.rights // Usually 'rights' maps to permission level string
             });
         } else {
             setStatus({ type: 'error', message: 'Usuário não encontrado.' });
@@ -78,6 +76,24 @@ const EditUser = () => {
     e.preventDefault();
     setStatus({ type: '', message: '' });
     
+    // Permission Check for Edit
+    const targetUser = { id: parseInt(id), role: formData.role };
+    // Warning: we should use the ORIGINAL role for permission check to see if we can edit THIS user.
+    // If I am Master and I try to edit an Admin, I shouldn't be able to.
+    
+    // Ideally we should have stored the original role separately or rely on backend.
+    // But since Master cannot delete Admin, likely cannot edit Admin either.
+    // Let's assume passed 'rights' or initial load role is the truth. 
+    // We already do a check based on `formData.role` which might have been changed by the user in the UI? 
+    // No, `targetUser` for checkPermission should probably reflect the *current* state in DB (or initial load).
+    // If I change the role dropdown to Admin, I (Master) shouldn't suddenly be unable to save?
+    // Actually if I am Master, I can't change role anyway.
+    
+    if (!checkPermission(currentUser, PERMISSIONS.EDIT_USER, targetUser)) {
+         setStatus({ type: 'error', message: 'Você não tem permissão para editar este usuário.' });
+         return;
+    }
+
     // Username Validation
     if (formData.username.length > 16) {
         setStatus({ type: 'error', message: 'O nome de usuário deve ter no máximo 16 caracteres.' });
@@ -106,18 +122,33 @@ const EditUser = () => {
     setLoading(true);
     try {
       const updateData = {
-        username: formData.username,
         email: formData.email
       };
       
+      // Only include username if allowed to edit it and it changed
+      if (checkPermission(currentUser, PERMISSIONS.EDIT_USERNAME, targetUser) && formData.username !== originalUsername) {
+          updateData.username = formData.username;
+      }
+
       if (formData.password) {
         updateData.password = formData.password;
+      }
+
+      // Role Update
+      if (checkPermission(currentUser, PERMISSIONS.EDIT_USER_ROLE, targetUser)) {
+          updateData.role = formData.role;
+          // You might also want to update 'rights' based on role if your backend expects it, 
+          // or ideally backend handles it. For now we just send role.
       }
 
       await api.put(`/auth/users/${id}`, updateData);
       setStatus({ type: 'success', message: 'Usuário atualizado com sucesso!' });
       
       setFormData(prev => ({ ...prev, password: '', confirmPassword: '' }));
+      // Update original username if changed successfully
+      if (updateData.username) {
+          setOriginalUsername(updateData.username);
+      }
       
     } catch (error) {
       console.error(error);
@@ -129,6 +160,14 @@ const EditUser = () => {
   };
 
   const handleDeleteAccount = async () => {
+    // Permission Check
+    const targetUser = { id: parseInt(id), role: formData.role };
+    if (!checkPermission(currentUser, PERMISSIONS.DELETE_USER, targetUser)) {
+        setStatus({ type: 'error', message: 'Permissão negada para excluir este usuário.' });
+        setShowDeleteModal(false);
+        return;
+    }
+
     try {
       await api.delete(`/auth/users/${id}`);
       navigate('/users');
@@ -139,7 +178,17 @@ const EditUser = () => {
     }
   };
 
-  if (initialLoading) return <div className="loading-state">Carregando...</div>;
+  // Wait for BOTH auth loading and user fetch loading
+  if (initialLoading || authLoading) return <div className="loading-state">Carregando...</div>;
+
+  // Construct target user object for permission checks
+  const targetUser = { id: parseInt(id), role: formData.role };
+  
+  // Calculate permissions
+  const canEditUsername = checkPermission(currentUser, PERMISSIONS.EDIT_USERNAME, targetUser);
+  const canDeleteUser = checkPermission(currentUser, PERMISSIONS.DELETE_USER, targetUser);
+  const canEditUser = checkPermission(currentUser, PERMISSIONS.EDIT_USER, targetUser);
+  const canEditRole = checkPermission(currentUser, PERMISSIONS.EDIT_USER_ROLE, targetUser);
 
   return (
     <div className="settings-container">
@@ -163,13 +212,32 @@ const EditUser = () => {
             value={formData.username} 
             onChange={handleChange}
             currentUsername={originalUsername}
+            disabled={!canEditUsername}
           />
 
           <EmailInput
             value={formData.email}
             onChange={handleChange}
-            currentEmail={formData.email} // Pass current email here if available, but for Edit logic we might need 'originalEmail'
+            currentEmail={formData.email} 
+            disabled={!canEditUser} 
           />
+
+          {/* ROLE SLECTION */}
+          <div className="form-group">
+              <label className="form-label">Cargo</label>
+              <select
+                  name="role"
+                  value={formData.role}
+                  onChange={handleChange}
+                  className="form-input"
+                  disabled={!canEditRole}
+                  style={!canEditRole ? { backgroundColor: '#f1f5f9', cursor: 'not-allowed' } : {}}
+              >
+                  <option value={ROLES.PADRAO}>{ROLES.PADRAO}</option>
+                  <option value={ROLES.MASTER}>{ROLES.MASTER}</option>
+                  <option value={ROLES.ADMIN}>{ROLES.ADMIN}</option>
+              </select>
+          </div>
 
           <div className="divider">
             <span>Alterar Senha (Opcional)</span>
@@ -194,29 +262,35 @@ const EditUser = () => {
           />
 
           <div className="form-info">
-             <p><strong>Cargo Atual:</strong> {formData.role}</p>
+             {/* Removed Cargo display since we have input now, maybe keep rights or info */}
              <p><strong>Permissão:</strong> {formData.rights}</p>
           </div>
 
           <div className="form-actions" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2rem' }}>
-             <button type="button" className="btn-delete-account" onClick={() => setShowDeleteModal(true)} style={{
-                 backgroundColor: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5', padding: '0.75rem 1.5rem', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '1rem'
-             }}>
-                <Trash2 size={18} /> Excluir Conta
-             </button>
+             {canDeleteUser ? (
+                 <button type="button" className="btn-delete-account" onClick={() => setShowDeleteModal(true)} style={{
+                     backgroundColor: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5', padding: '0.75rem 1.5rem', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '1rem'
+                 }}>
+                    <Trash2 size={18} /> Excluir Conta
+                 </button>
+             ) : (
+                <div></div> // Spacer to keep layout if expected
+             )}
              
-             <div style={{ display: 'flex', gap: '1rem' }}>
+             <div style={{ display: 'flex', gap: '1rem', marginLeft: 'auto' }}>
                 <button type="button" className="btn-secondary" onClick={() => navigate('/users')}>
                     <ArrowLeft size={20} /> Voltar
                 </button>
-                <button type="submit" className="save-btn" disabled={loading}>
-                    {loading ? 'Salvando...' : (
-                    <>
-                        <Save size={20} />
-                        Salvar Alterações
-                    </>
-                    )}
-                </button>
+                {canEditUser && (
+                    <button type="submit" className="save-btn" disabled={loading}>
+                        {loading ? 'Salvando...' : (
+                        <>
+                            <Save size={20} />
+                            Salvar Alterações
+                        </>
+                        )}
+                    </button>
+                )}
              </div>
           </div>
         </form>

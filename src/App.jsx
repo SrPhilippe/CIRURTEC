@@ -9,7 +9,7 @@ import ClientesCadastrados from './pages/Clientes/ClientesCadastrados';
 import NovoCadastro from './pages/Clientes/NovoCadastro';
 import ProtectedRoute from './components/ProtectedRoute';
 
-import Settings from './pages/Settings';
+import Perfil from './pages/Perfil'; // Added
 import Users from './pages/Users';
 import EditUser from './pages/EditUser';
 
@@ -29,7 +29,7 @@ function App() {
                <Route path="/clientes/novo" element={<NovoCadastro />} />
                <Route path="/clientes/editar/:id" element={<NovoCadastro />} />
                <Route path="/clientes/:id" element={<NovoCadastro />} />
-               <Route path="/settings" element={<Settings />} /> {/* Settings Route */}
+               <Route path="/perfil" element={<Perfil />} /> {/* Profile Route */}
              </Route>
           </Route>
 

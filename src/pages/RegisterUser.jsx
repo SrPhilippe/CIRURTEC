@@ -4,10 +4,11 @@ import api from '../services/api';
 import { UsernameInput, EmailInput, PasswordInput } from '../components/FormInputs';
 import LoadingModal from '../components/LoadingModal';
 import { Mail, Lock, Shield, UserPlus, AlertCircle, CheckCircle, Briefcase } from 'lucide-react';
+import { checkPermission, PERMISSIONS } from '../utils/permissions';
 import './RegisterUser.css';
 
 const RegisterUser = () => {
-  const { register } = useContext(AuthContext);
+  const { register, user: currentUser } = useContext(AuthContext);
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -35,6 +36,13 @@ const RegisterUser = () => {
     e.preventDefault();
     setLoading(true);
     setMessage({ type: '', text: '' });
+    
+    // Permission check: Master cannot create Admin users
+    if (currentUser?.rights === 'Master' && formData.rights === 'ADMIN') {
+        setMessage({ type: 'error', text: 'Você não tem permissão para criar usuários ADMIN.' });
+        setLoading(false);
+        return;
+    }
     
     // Username Validation
     if (formData.username.length > 16) {
@@ -143,7 +151,7 @@ const RegisterUser = () => {
               >
                 <option value="Padrão">Padrão</option>
                 <option value="Master">Master</option>
-                <option value="ADMIN">ADMIN</option>
+                <option value="ADMIN" disabled={currentUser?.rights === 'Master'}>ADMIN</option>
               </select>
             </div>
           </div>
