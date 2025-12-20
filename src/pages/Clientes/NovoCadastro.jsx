@@ -1,8 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
-import { Building2, Plus, Save, Trash2, Printer, ArrowLeft, Edit } from 'lucide-react';
+import { Building2, Plus, Save, Trash2, Printer, ArrowLeft, Edit, X } from 'lucide-react';
+import { AuthContext } from '../../context/AuthContext';
+import { checkPermission, PERMISSIONS } from '../../utils/permissions';
 import './Clientes.css';
+import DeleteConfirmationModal from '../../components/DeleteConfirmationModal';
 import DatePicker, { registerLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { ptBR } from 'date-fns/locale';
@@ -72,6 +75,14 @@ export default function NovoCadastro() {
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [warningMessage, setWarningMessage] = useState(''); // For duplicate CNPJ warning
+  const [loadingCnpj, setLoadingCnpj] = useState(false);
+  
+  // Delete modal states
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  
+  const { user: currentUser } = useContext(AuthContext);
+  const canDeleteClient = checkPermission(currentUser, PERMISSIONS.DELETE_CLIENT);
+  const canDeleteEquipment = checkPermission(currentUser, PERMISSIONS.DELETE_EQUIPMENT);
 
   useEffect(() => {
     if (id) {
@@ -142,7 +153,7 @@ export default function NovoCadastro() {
     }
   };
 
-  const [loadingCnpj, setLoadingCnpj] = useState(false);
+
 
   const fetchCNPJData = async (cnpj) => {
     setLoadingCnpj(true);
@@ -325,6 +336,21 @@ export default function NovoCadastro() {
     setEquipments(prev => prev.filter(eq => eq.id !== id));
   };
 
+  const handleDeleteClick = () => {
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    try {
+      await api.delete(`/clients/${id}`);
+      navigate('/clientes/lista');
+    } catch (error) {
+      console.error('Erro ao excluir cliente:', error);
+      setErrorMessage('Erro ao excluir cliente. Tente novamente.');
+      setShowDeleteModal(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSuccessMessage('');
@@ -485,7 +511,7 @@ export default function NovoCadastro() {
                     maxLength={18}
                     placeholder="00.000.000/0000-00"
                     className={`form-input ${errors.cnpj ? 'input-error' : ''}`}
-                    disabled={loadingCnpj}
+                    disabled={loadingCnpj || (id && !checkPermission(currentUser, PERMISSIONS.EDIT_CLIENT_CNPJ))}
                   />
                   {errors.cnpj && <span className="error-text">{errors.cnpj}</span>}
                 </div>
@@ -528,8 +554,9 @@ export default function NovoCadastro() {
                     required
                     className="form-select"
                   >
-                    <option value="CEMIG">CEMIG</option>
+                    <option value="BAUMER">BAUMER</option>
                     <option value="CIRURTEC">CIRURTEC</option>
+                    <option value="CEMIG">CEMIG</option>
                   </select>
                 </div>
 
@@ -652,7 +679,7 @@ export default function NovoCadastro() {
                           {errors[`eq-${eq.id}-dataNota`] && <span className="error-text">{errors[`eq-${eq.id}-dataNota`]}</span>}
                         </td>
                         <td>
-                          { !isViewMode && (
+                          { !isViewMode && canDeleteEquipment && (
                         <button 
                           type="button" 
                           onClick={() => removeEquipment(eq.id)}
@@ -753,6 +780,16 @@ export default function NovoCadastro() {
 
         {/* ACTIONS */}
         <div className="action-bar">
+          {isEditMode && canDeleteClient && (
+            <button 
+              type="button" 
+              onClick={handleDeleteClick}
+              className="btn-delete-account"
+              style={{ marginRight: 'auto' }}
+            >
+              <Trash2 size={18} /> Excluir Cliente
+            </button>
+          )}
           <button type="button" className="btn-secondary" onClick={() => navigate('/clientes/lista')}>
             <ArrowLeft size={18} /> Voltar
           </button>
@@ -763,6 +800,31 @@ export default function NovoCadastro() {
           )}
         </div>
       </form>
+      
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteConfirm}
+        expectedValue={clientData.cnpj} // Enforce formatted CNPJ match
+        title="Confirmar Exclusão"
+        description={
+            <>
+                <p style={{ marginBottom: '1rem', color: '#dc2626', fontWeight: '500' }}>
+                    ⚠️ Esta ação é permanente e não pode ser desfeita!
+                </p>
+                <p style={{ marginBottom: '1rem' }}>
+                    Para confirmar a exclusão do cliente, digite o CNPJ abaixo:
+                </p>
+                <p style={{ marginBottom: '1rem', fontWeight: '600', fontSize: '1.1rem' }}>
+                    {clientData.cnpj}
+                </p>
+            </>
+        }
+        instructionLabel={null} // Included in description above
+        inputPlaceholder="Digite o CNPJ para confirmar"
+        confirmButtonText="Excluir Cliente"
+      />
     </div>
   );
 }

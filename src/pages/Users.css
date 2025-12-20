@@ -33,7 +33,7 @@
 .search-bar {
     position: relative;
     width: 100%;
-    max-width: 400px;
+    max-width: 600px;
 }
 
 .search-bar svg {
@@ -64,6 +64,7 @@
     gap: 1rem;
     align-items: center;
     flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 .btn-add-user {

@@ -1,13 +1,15 @@
 import React, { useState, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import api from '../services/api';
 import { UsernameInput, EmailInput, PasswordInput } from '../components/FormInputs';
 import LoadingModal from '../components/LoadingModal';
-import { Mail, Lock, Shield, UserPlus, AlertCircle, CheckCircle, Briefcase } from 'lucide-react';
+import { Mail, Lock, Shield, UserPlus, AlertCircle, CheckCircle, Briefcase, ArrowLeft } from 'lucide-react';
 import { checkPermission, PERMISSIONS } from '../utils/permissions';
 import './RegisterUser.css';
 
 const RegisterUser = () => {
+  const navigate = useNavigate();
   const { register, user: currentUser } = useContext(AuthContext);
   const [formData, setFormData] = useState({
     username: '',
@@ -156,16 +158,26 @@ const RegisterUser = () => {
             </div>
           </div>
 
-          <button type="submit" className="register-button" disabled={loading}>
-            {loading ? (
-              'Registrando...'
-            ) : (
-              <>
-                <UserPlus size={18} />
-                Registrar Usuário
-              </>
-            )}
-          </button>
+          <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+             <button 
+                type="button" 
+                onClick={() => navigate('/users')}
+                className="btn-secondary"
+             >
+                <ArrowLeft size={18} />
+                Voltar
+             </button>
+             <button type="submit" className="register-button" disabled={loading} style={{ flex: 1, margin: 0 }}>
+                {loading ? (
+                'Registrando...'
+                ) : (
+                <>
+                    <UserPlus size={18} />
+                    Registrar Usuário
+                </>
+                )}
+             </button>
+          </div>
         </form>
       </div>
       <LoadingModal isOpen={loading} duration={5000} message="Registrando usuário..." />

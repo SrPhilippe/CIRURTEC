@@ -153,6 +153,7 @@ export default function ClientesCadastrados() {
                 className={`btn-filter ${Object.values(filters).some(Boolean) ? 'active' : ''}`}
                 onClick={() => setShowFilterModal(true)}
                 title="Filtros Avançados"
+                style={{ marginRight: 5 }}
              >
                 <Filter size={20} />
           </button>
@@ -312,15 +313,6 @@ export default function ClientesCadastrados() {
                           >
                             <Edit size={18} />
                           </button>
-                          {canDeleteClient && (
-                              <button 
-                                className="btn-icon btn-delete" 
-                                title="Excluir"
-                                onClick={() => handleDelete(client.id)}
-                              >
-                                <Trash2 size={18} />
-                              </button>
-                          )}
                         </div>
                       </td>
                     </tr>

@@ -76,10 +76,10 @@ const Users = () => {
             <thead>
               <tr>
                 <th>Usuário</th>
+                <th>Ações</th>
                 <th>E-mail</th>
                 <th>Cargo</th>
                 <th>Permissão</th>
-                <th>Ações</th>
                 <th>Data de Criação</th>
               </tr>
             </thead>
@@ -93,6 +93,20 @@ const Users = () => {
                       </div>
                       {user.username}
                     </td>
+                    <td>
+                      <button 
+                        className="btn-manage" 
+                        onClick={() => navigate(`/users/edit/${user.id}`)}
+                        title="Gerenciar Usuário"
+                        style={{
+                            backgroundColor: '#f1f5f9', color: '#334155', border: '1px solid #e2e8f0', 
+                            padding: '0.4rem 0.8rem', borderRadius: '6px', cursor: 'pointer', 
+                            fontSize: '0.85rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.5rem'
+                        }}
+                      >
+                        <Edit size={14} /> Gerenciar
+                      </button>
+                    </td>
                     <td>{user.email}</td>
                     <td>{user.role}</td>
                     <td>
@@ -100,18 +114,6 @@ const Users = () => {
                         {getRoleIcon(user.rights)}
                         <span>{user.rights}</span>
                       </div>
-                    </td>
-                    <td>
-                      <button 
-                        className="btn-icon-action" 
-                        onClick={() => navigate(`/users/edit/${user.id}`)}
-                        title="Editar Usuário"
-                        style={{
-                            background: 'none', border: 'none', cursor: 'pointer', color: '#64748b'
-                        }}
-                      >
-                        <Edit size={18} />
-                      </button>
                     </td>
                     <td>{new Date(user.created_at).toLocaleDateString('pt-BR')}</td>
                   </tr>

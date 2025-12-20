@@ -208,6 +208,30 @@ router.put('/:id', verifyToken, async (req, res) => {
         connection = await pool.getConnection()
         await connection.beginTransaction()
 
+        // Security Check: Fetch current client data to compare CNPJ
+        const [currentClientRows] = await connection.query('SELECT cnpj FROM clients WHERE id = ?', [req.params.id])
+
+        if (currentClientRows.length === 0) {
+            await connection.rollback() // clean up transaction if client not found
+            connection.release()
+            return res.status(404).json({ message: 'Cliente não encontrado' })
+        }
+
+        const currentCnpj = currentClientRows[0].cnpj
+
+        // If CNPJ is being changed
+        if (currentCnpj !== clientData.cnpj) {
+            // Check permissions
+            const userRole = (req.user.rights || req.user.role || '').toUpperCase()
+
+            // Allow only ADMIN or MASTER to change CNPJ
+            if (userRole !== 'ADMIN' && userRole !== 'MASTER') {
+                await connection.rollback()
+                connection.release()
+                return res.status(403).json({ message: 'Você não tem permissão para alterar o CNPJ. O Administrador foi notificado.' })
+            }
+        }
+
         // Update client info
         await connection.query(
             `UPDATE clients 

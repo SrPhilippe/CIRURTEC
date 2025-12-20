@@ -51,15 +51,15 @@ const Sidebar = () => {
     if (isCollapsed) {
       setIsCollapsed(false);
       setTimeout(() => {
-        setExpandedMenus(prev => ({ ...prev, [title]: !prev[title] }));
+        setExpandedMenus(prev => ({ [title]: !prev[title] }));
       }, 50);
     } else {
-      setExpandedMenus(prev => ({ ...prev, [title]: !prev[title] }));
+      setExpandedMenus(prev => ({ [title]: !prev[title] }));
     }
   };
 
   const menuItems = [
-    { title: 'Perfil', icon: User, route: '/perfil' },
+    { title: user?.username || 'Perfil', icon: User, route: '/perfil' },
     { title: 'Início', icon: Home, route: '/', exact: true },
     { title: 'Viagens', icon: Car, route: '/email-viagem' },
     { 
@@ -83,6 +83,14 @@ const Sidebar = () => {
     }, 
     { title: 'Relatórios', icon: FileText, route: '/reports', disabled: true },
     { title: 'Dashboard', icon: BarChart, route: '/dashboard', disabled: true },
+    { 
+      title: 'Configurações', 
+      icon: Settings, 
+      isSubmenu: true, 
+      subItems: [
+        { title: 'Equipamentos', icon: List, route: '/configuracoes/equipamentos' }
+      ]
+    },
     { title: 'Ajuda', icon: HelpCircle, route: '/help', disabled: true },
   ];
 

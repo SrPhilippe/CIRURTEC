@@ -18,6 +18,8 @@ export const PERMISSIONS = {
     // Client Management
     CREATE_CLIENT: 'CREATE_CLIENT',    // Create new clients
     DELETE_CLIENT: 'DELETE_CLIENT',    // Delete clients
+    EDIT_CLIENT_CNPJ: 'EDIT_CLIENT_CNPJ', // Edit client CNPJ
+    DELETE_EQUIPMENT: 'DELETE_EQUIPMENT', // Delete equipments from client
 }
 
 /**
@@ -80,6 +82,12 @@ export const checkPermission = (currentUser, permission, targetUser = null) => {
                 // It didn't explicitly forbid deleting clients for Master, so we assume TRUE.
                 return true
 
+            case PERMISSIONS.DELETE_EQUIPMENT:
+                return true
+
+            case PERMISSIONS.EDIT_CLIENT_CNPJ:
+                return true
+
             default:
                 return false
         }
@@ -115,6 +123,12 @@ export const checkPermission = (currentUser, permission, targetUser = null) => {
 
             case PERMISSIONS.EDIT_USER_ROLE:
                 return false
+
+            case PERMISSIONS.DELETE_EQUIPMENT:
+                return false // "Padrão" cannot delete equipment
+
+            case PERMISSIONS.EDIT_CLIENT_CNPJ:
+                return false // Cannot edit CNPJ
 
             default:
                 return false

@@ -6,6 +6,7 @@ import { User, Mail, Lock, Save, AlertCircle, CheckCircle, Trash2, X, ArrowLeft 
 import { AuthContext } from '../context/AuthContext'; 
 import { checkPermission, PERMISSIONS, ROLES } from '../utils/permissions';
 import './Perfil.css'; // Reusing settings styles
+import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
 
 const EditUser = () => {
   const { id } = useParams();
@@ -27,7 +28,6 @@ const EditUser = () => {
 
   // Delete Modal State
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deleteConfirmation, setDeleteConfirmation] = useState('');
 
   // Username Check State
   const [originalUsername, setOriginalUsername] = useState('');
@@ -297,64 +297,24 @@ const EditUser = () => {
       </div>
 
       {/* DELETE MODAL */}
-      {showDeleteModal && (
-        <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000,
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
-        }}>
-            <div style={{
-                background: 'white', padding: '2rem', borderRadius: '12px',
-                width: '100%', maxWidth: '500px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)'
-            }}>
-                <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '1rem'}}>
-                    <h2 style={{color: '#991b1b', margin: 0}}>Excluir Conta</h2>
-                    <button onClick={() => setShowDeleteModal(false)} style={{border: 'none', background: 'transparent', cursor: 'pointer'}}>
-                        <X size={24} />
-                    </button>
-                </div>
-                
-                <p style={{marginBottom: '1rem', color: '#334155'}}>
-                    Tem certeza que deseja excluir a conta de <strong>{formData.username}</strong>? Esta ação é irreversível.
-                </p>
-
-                <div style={{marginBottom: '1.5rem'}}>
-                    <label style={{display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#64748b'}}>
-                        Para confirmar, digite <strong>{formData.username}</strong> abaixo:
-                    </label>
-                    <input 
-                        type="text" 
-                        value={deleteConfirmation}
-                        onChange={(e) => setDeleteConfirmation(e.target.value)}
-                        placeholder="Nome do usuário"
-                        style={{
-                            width: '100%', padding: '0.75rem', borderRadius: '8px',
-                            border: '1px solid #e2e8f0', fontSize: '1rem'
-                        }}
-                    />
-                </div>
-
-                <div style={{display: 'flex', justifyContent: 'flex-end', gap: '1rem'}}>
-                    <button onClick={() => setShowDeleteModal(false)} style={{
-                        padding: '0.75rem 1.5rem', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer'
-                    }}>
-                        Cancelar
-                    </button>
-                    <button 
-                        onClick={handleDeleteAccount} 
-                        disabled={deleteConfirmation !== formData.username}
-                        style={{
-                            padding: '0.75rem 1.5rem', borderRadius: '8px', border: 'none', 
-                            background: deleteConfirmation === formData.username ? '#dc2626' : '#fca5a5',
-                            color: 'white', fontWeight: 'bold', cursor: deleteConfirmation === formData.username ? 'pointer' : 'not-allowed'
-                        }}
-                    >
-                        Confirmar Exclusão
-                    </button>
-                </div>
-            </div>
-        </div>
-      )}
+      <DeleteConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteAccount}
+        expectedValue={formData.username}
+        title="Excluir Conta"
+        description={
+            <p style={{marginBottom: '1rem', color: '#334155'}}>
+                Tem certeza que deseja excluir a conta de <strong>{formData.username}</strong>? Esta ação é irreversível.
+            </p>
+        }
+        instructionLabel={
+            <>
+                Para confirmar, digite <strong>{formData.username}</strong> abaixo:
+            </>
+        }
+        inputPlaceholder="Nome do usuário"
+      />
     </div>
   );
 };
