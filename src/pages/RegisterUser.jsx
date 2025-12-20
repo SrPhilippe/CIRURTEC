@@ -168,7 +168,7 @@ const RegisterUser = () => {
           </button>
         </form>
       </div>
-      <LoadingModal isOpen={loading} message="Registrando usuário..." />
+      <LoadingModal isOpen={loading} duration={5000} message="Registrando usuário..." />
     </div>
   );
 };

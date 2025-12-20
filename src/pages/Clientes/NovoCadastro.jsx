@@ -71,6 +71,7 @@ export default function NovoCadastro() {
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [warningMessage, setWarningMessage] = useState(''); // For duplicate CNPJ warning
 
   useEffect(() => {
     if (id) {
@@ -93,6 +94,19 @@ export default function NovoCadastro() {
       setErrorMessage('');
     }
   }, [id]);
+
+  // Check for duplicate CNPJ warning from navigation state
+  useEffect(() => {
+    if (location.state?.duplicateCNPJ) {
+      setWarningMessage('Este cliente já possui cadastro');
+      // Clear the state to avoid showing on refresh
+      window.history.replaceState({}, document.title);
+      
+      // Auto-hide after 5 seconds
+      const timer = setTimeout(() => setWarningMessage(''), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [location.state]);
 
   const fetchClientData = async (clientId) => {
     try {
@@ -140,11 +154,8 @@ export default function NovoCadastro() {
       // 1. Check local database first
       const checkResponse = await api.get(`/clients/check-cnpj/${cleanCNPJ}`);
       if (checkResponse.data.exists) {
-         // Redirect to existing client
-         navigate(`/clientes/${checkResponse.data.id}`);
-         // We might want to show a toast, but navigation usually clears it unless we use context/global state. 
-         // Since I don't have a global toast context visible here, I'll rely on the redirect making it obvious.
-         // Or I could pass state in navigation.
+         // Redirect to existing client with warning
+         navigate(`/clientes/${checkResponse.data.id}`, { state: { duplicateCNPJ: true } });
          return; 
       }
 
@@ -439,6 +450,13 @@ export default function NovoCadastro() {
           {successMessage}
         </div>
       )}
+      
+      {warningMessage && (
+        <div className="alert alert-warning" style={{ backgroundColor: '#fef3c7', borderColor: '#fbbf24', color: '#92400e' }}>
+          {warningMessage}
+        </div>
+      )}
+      
       {errorMessage && (
         <div className="alert alert-error">
           {errorMessage}

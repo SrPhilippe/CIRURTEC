@@ -19,6 +19,7 @@ import {
   LogOut,
   UserPlus
 } from 'lucide-react';
+import logo from '../assets/images/logo-cirurtec.png';
 import './Sidebar.css';
 
 import { useContext } from 'react';
@@ -88,7 +89,7 @@ const Sidebar = () => {
   return (
     <aside className={`sidebar ${isCollapsed ? 'collapsed' : 'expanded'}`}>
       <div className="sidebar-header">
-        {!isCollapsed && <span className="sidebar-title">Menu</span>}
+        {!isCollapsed && <img src={logo} alt="CIRURTEC" className="sidebar-logo" style={{ maxWidth: '120px', height: 'auto' }} />}
         <button 
           className="sidebar-toggle" 
           onClick={toggleSidebar}

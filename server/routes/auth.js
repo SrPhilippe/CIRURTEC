@@ -124,7 +124,7 @@ router.get('/users', [verifyToken, verifyAdmin], async (req, res) => {
         res.json(users)
     } catch (error) {
         console.error(error)
-        res.status(500).json({ message: 'Error fetching users' })
+        res.status(500).json({ message: 'Erro ao buscar usuários' })
     }
 })
 
@@ -135,11 +135,11 @@ router.put('/users/:id', verifyToken, async (req, res) => {
 
     // Validation - only validate if fields are provided
     if (username !== undefined) {
-        if (username.length > 16) return res.status(400).json({ message: 'Username max 16 characters' })
-        if (/\s/.test(username)) return res.status(400).json({ message: 'Username cannot contain spaces' })
-        if (!/^[a-zA-Z0-9._-]+$/.test(username)) return res.status(400).json({ message: 'Username contains invalid characters' })
+        if (username.length > 16) return res.status(400).json({ message: 'Usuário max 16 caracteres' })
+        if (/\s/.test(username)) return res.status(400).json({ message: 'Usuário não pode conter espaço' })
+        if (!/^[a-zA-Z0-9._-]+$/.test(username)) return res.status(400).json({ message: 'Usuário contém caracteres inválidos' })
     }
-    if (password && password.length > 24) return res.status(400).json({ message: 'Password max 24 characters' })
+    if (password && password.length > 24) return res.status(400).json({ message: 'Senha max 24 caracteres' })
 
     // Ensure user is updating their own profile or is Admin
     // For now, let's strictly restrict to own profile mostly, or Admin can edit anyone?
@@ -148,14 +148,14 @@ router.put('/users/:id', verifyToken, async (req, res) => {
     // Allowing Admin to edit via this route might be useful too, but let's stick to "Settings" context.
 
     if (parseInt(userId) !== req.user.id && req.user.rights !== 'ADMIN') {
-        return res.status(403).json({ message: 'Unauthorized' })
+        return res.status(403).json({ message: 'Não Autorizado' })
     }
 
     try {
         // Get current user data
         const [currentUser] = await pool.query('SELECT username, email FROM users WHERE id = ?', [userId])
         if (currentUser.length === 0) {
-            return res.status(404).json({ message: 'User not found' })
+            return res.status(404).json({ message: 'Usuário não encontrado' })
         }
 
         // Use current values if not provided
@@ -169,7 +169,7 @@ router.put('/users/:id', verifyToken, async (req, res) => {
         )
 
         if (existing.length > 0) {
-            return res.status(400).json({ message: 'Username or Email already in use' })
+            return res.status(400).json({ message: 'Usuário ou E-mail já está em uso' })
         }
 
         let query = 'UPDATE users SET username = ?, email = ?'
@@ -189,11 +189,11 @@ router.put('/users/:id', verifyToken, async (req, res) => {
         // Return updated user info (excluding password)
         const [updatedUser] = await pool.query('SELECT id, username, email, role, rights FROM users WHERE id = ?', [userId])
 
-        res.json({ message: 'Profile updated successfully', user: updatedUser[0] })
+        res.json({ message: 'Perfil Atualizado com Sucesso', user: updatedUser[0] })
 
     } catch (error) {
         console.error(error)
-        res.status(500).json({ message: 'Error updating profile' })
+        res.status(500).json({ message: 'Erro ao atualizar perfil' })
     }
 })
 
@@ -202,20 +202,20 @@ router.delete('/users/:id', [verifyToken, verifyAdmin], async (req, res) => {
     const userId = req.params.id
 
     if (parseInt(userId) === req.user.id) {
-        return res.status(400).json({ message: 'You cannot delete your own account' })
+        return res.status(400).json({ message: 'Você não pode excluir sua própria conta' })
     }
 
     try {
         const [result] = await pool.query('DELETE FROM users WHERE id = ?', [userId])
 
         if (result.affectedRows === 0) {
-            return res.status(404).json({ message: 'User not found' })
+            return res.status(404).json({ message: 'Usuário não encontrado' })
         }
 
-        res.json({ message: 'User deleted successfully' })
+        res.json({ message: 'Usuário excluído com sucesso' })
     } catch (error) {
         console.error(error)
-        res.status(500).json({ message: 'Error deleting user' })
+        res.status(500).json({ message: 'Erro ao excluir usuário' })
     }
 })
 
