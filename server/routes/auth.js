@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import pool from '../db.js'
 import { verifyToken, verifyAdmin } from '../middleware/auth.js'
+import { nanoid } from 'nanoid'
 
 const router = express.Router()
 
@@ -57,6 +58,7 @@ router.post('/login', async (req, res) => {
 
         res.status(200).send({
             id: user.id,
+            public_id: user.public_ID,
             username: user.username,
             email: user.email,
             rights: user.rights,
@@ -93,10 +95,11 @@ router.post('/register', [verifyToken, verifyAdmin], async (req, res) => {
         const hashedPassword = bcrypt.hashSync(password, 8)
         const validRights = ['ADMIN', 'Master', 'Padrão']
         const userRights = validRights.includes(rights) ? rights : 'Padrão'
+        const publicId = nanoid()
 
         await pool.query(
-            'INSERT INTO users (username, email, password, role, rights) VALUES (?, ?, ?, ?, ?)',
-            [username, email, hashedPassword, role, userRights]
+            'INSERT INTO users (username, email, password, role, rights, public_ID) VALUES (?, ?, ?, ?, ?, ?)',
+            [username, email, hashedPassword, role, userRights, publicId]
         )
 
         res.status(201).json({ message: 'User registered successfully!' })
@@ -109,7 +112,7 @@ router.post('/register', [verifyToken, verifyAdmin], async (req, res) => {
 // Get Current User
 router.get('/me', verifyToken, async (req, res) => {
     try {
-        const [users] = await pool.query('SELECT id, username, email, rights, role FROM users WHERE id = ?', [req.user.id])
+        const [users] = await pool.query('SELECT id, public_ID, username, email, rights, role FROM users WHERE id = ?', [req.user.id])
         if (users.length === 0) return res.status(404).json({ message: 'User not found' })
         res.json(users[0])
     } catch (error) {
@@ -120,7 +123,7 @@ router.get('/me', verifyToken, async (req, res) => {
 // Get All Users (Admin Only)
 router.get('/users', [verifyToken, verifyAdmin], async (req, res) => {
     try {
-        const [users] = await pool.query('SELECT id, username, email, role, rights, created_at FROM users')
+        const [users] = await pool.query('SELECT id, public_ID, username, email, role, rights, created_at FROM users')
         res.json(users)
     } catch (error) {
         console.error(error)
@@ -129,8 +132,8 @@ router.get('/users', [verifyToken, verifyAdmin], async (req, res) => {
 })
 
 // Update User Profile
-router.put('/users/:id', verifyToken, async (req, res) => {
-    const userId = req.params.id
+router.put('/users/:idOrPublicId', verifyToken, async (req, res) => {
+    const { idOrPublicId } = req.params
     const { username, email, password } = req.body
 
     // Validation - only validate if fields are provided
@@ -141,17 +144,28 @@ router.put('/users/:id', verifyToken, async (req, res) => {
     }
     if (password && password.length > 24) return res.status(400).json({ message: 'Senha max 24 caracteres' })
 
-    // Ensure user is updating their own profile or is Admin
-    // For now, let's strictly restrict to own profile mostly, or Admin can edit anyone?
-    // Requirement says "menu de configurações, onde o mesmo poderá editar informações do seu perfil".
-    // So strictly own profile is the main requirement. 
-    // Allowing Admin to edit via this route might be useful too, but let's stick to "Settings" context.
-
-    if (parseInt(userId) !== req.user.id && req.user.rights !== 'ADMIN') {
-        return res.status(403).json({ message: 'Não Autorizado' })
-    }
-
+    let connection
     try {
+        let userId = idOrPublicId
+
+        // Resolve public_ID to ID if necessary
+        // Check if it's numeric (ID) or string (public_ID)
+        // Simple check: if it contains non-digits, it's public_ID (except typical public_ID doesn't look like number anyway)
+        // NanoID is 21 chars, ID is int.
+
+        if (isNaN(idOrPublicId)) {
+            const [users] = await pool.query('SELECT id FROM users WHERE public_ID = ?', [idOrPublicId])
+            if (users.length === 0) return res.status(404).json({ message: 'Usuário não encontrado' })
+            userId = users[0].id
+        } else {
+            userId = parseInt(idOrPublicId)
+        }
+
+        // Ensure user is updating their own profile or is Admin
+        if (userId !== req.user.id && req.user.rights !== 'ADMIN') {
+            return res.status(403).json({ message: 'Não Autorizado' })
+        }
+
         // Get current user data
         const [currentUser] = await pool.query('SELECT username, email FROM users WHERE id = ?', [userId])
         if (currentUser.length === 0) {
@@ -187,7 +201,7 @@ router.put('/users/:id', verifyToken, async (req, res) => {
         await pool.query(query, params)
 
         // Return updated user info (excluding password)
-        const [updatedUser] = await pool.query('SELECT id, username, email, role, rights FROM users WHERE id = ?', [userId])
+        const [updatedUser] = await pool.query('SELECT id, public_ID, username, email, role, rights FROM users WHERE id = ?', [userId])
 
         res.json({ message: 'Perfil Atualizado com Sucesso', user: updatedUser[0] })
 
@@ -198,14 +212,26 @@ router.put('/users/:id', verifyToken, async (req, res) => {
 })
 
 // Delete User (Admin Only)
-router.delete('/users/:id', [verifyToken, verifyAdmin], async (req, res) => {
-    const userId = req.params.id
-
-    if (parseInt(userId) === req.user.id) {
-        return res.status(400).json({ message: 'Você não pode excluir sua própria conta' })
-    }
+// Delete User (Admin Only)
+router.delete('/users/:idOrPublicId', [verifyToken, verifyAdmin], async (req, res) => {
+    const { idOrPublicId } = req.params
 
     try {
+        let userId = idOrPublicId
+
+        if (isNaN(idOrPublicId)) {
+            const [users] = await pool.query('SELECT id FROM users WHERE public_ID = ?', [idOrPublicId])
+            // If not found, try proceeding as if it might fail later, or return 404 here
+            if (users.length === 0) return res.status(404).json({ message: 'Usuário não encontrado' })
+            userId = users[0].id
+        } else {
+            userId = parseInt(idOrPublicId)
+        }
+
+        if (userId === req.user.id) {
+            return res.status(400).json({ message: 'Você não pode excluir sua própria conta' })
+        }
+
         const [result] = await pool.query('DELETE FROM users WHERE id = ?', [userId])
 
         if (result.affectedRows === 0) {

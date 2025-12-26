@@ -282,7 +282,7 @@ export default function ClientesCadastrados() {
                 <tr>
                   <th>Nome do Hospital</th>
                   <th>CNPJ</th>
-                  <th>Tipo</th>
+
                   <th>Ações</th>
                 </tr>
               </thead>
@@ -292,24 +292,20 @@ export default function ClientesCadastrados() {
                     <tr key={client.id}>
                       <td className="font-medium">{client.nome_hospital}</td>
                       <td>{client.cnpj}</td>
-                      <td>
-                        <span className={`badge badge-${client.tipo_cliente?.toLowerCase()}`}>
-                          {client.tipo_cliente}
-                        </span>
-                      </td>
+
                       <td>
                         <div className="action-buttons">
                           <button 
                             className="btn-icon btn-view" 
                             title="Visualizar"
-                            onClick={() => navigate(`/clientes/${client.id}`)}
+                            onClick={() => navigate(`/clientes/${client.cnpj.replace(/\D/g, '')}`)}
                           >
                             <Eye size={18} />
                           </button>
                           <button 
                             className="btn-icon btn-edit" 
                             title="Editar"
-                            onClick={() => navigate(`/clientes/editar/${client.id}`)}
+                            onClick={() => navigate(`/clientes/editar/${client.cnpj.replace(/\D/g, '')}`)}
                           >
                             <Edit size={18} />
                           </button>
@@ -319,7 +315,7 @@ export default function ClientesCadastrados() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="6" className="text-center">
+                    <td colSpan="3" className="text-center">
                       {searchTerm ? 'Nenhum cliente encontrado.' : 'Nenhum cliente cadastrado.'}
                     </td>
                   </tr>

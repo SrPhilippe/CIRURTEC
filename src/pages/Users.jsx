@@ -96,7 +96,7 @@ const Users = () => {
                     <td>
                       <button 
                         className="btn-manage" 
-                        onClick={() => navigate(`/users/edit/${user.id}`)}
+                        onClick={() => navigate(`/users/edit/${user.public_ID}`)}
                         title="Gerenciar Usuário"
                         style={{
                             backgroundColor: '#f1f5f9', color: '#334155', border: '1px solid #e2e8f0', 

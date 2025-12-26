@@ -9,9 +9,11 @@ import './Perfil.css'; // Reusing settings styles
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
 
 const EditUser = () => {
-  const { id } = useParams();
+  const { id } = useParams(); // id here will be the public_ID string from URL
   const navigate = useNavigate();
   const { user: currentUser, loading: authLoading } = useContext(AuthContext);
+  
+  const [targetUserId, setTargetUserId] = useState(null); // Real numeric ID for permission checks locally
   
   const [formData, setFormData] = useState({
     username: '',
@@ -39,9 +41,12 @@ const EditUser = () => {
   const fetchUser = async () => {
     try {
         const response = await api.get('/auth/users');
-        const user = response.data.find(u => u.id === parseInt(id));
+        // 'id' from params is now public_ID (string) or numeric id (legacy/self)
+        // Find user by public_ID OR id
+        const user = response.data.find(u => u.public_ID === id || u.id.toString() === id);
         
         if (user) {
+            setTargetUserId(user.id);
             setOriginalUsername(user.username);
             setFormData({
                 username: user.username,
@@ -77,7 +82,8 @@ const EditUser = () => {
     setStatus({ type: '', message: '' });
     
     // Permission Check for Edit
-    const targetUser = { id: parseInt(id), role: formData.role };
+    // Use targetUserId which we resolved on fetch
+    const targetUser = { id: targetUserId || parseInt(id), role: formData.role };
     // Warning: we should use the ORIGINAL role for permission check to see if we can edit THIS user.
     // If I am Master and I try to edit an Admin, I shouldn't be able to.
     
@@ -141,6 +147,7 @@ const EditUser = () => {
           // or ideally backend handles it. For now we just send role.
       }
 
+      // Use 'id' from params which is public_ID, backend now supports it
       await api.put(`/auth/users/${id}`, updateData);
       setStatus({ type: 'success', message: 'Usuário atualizado com sucesso!' });
       
@@ -161,7 +168,7 @@ const EditUser = () => {
 
   const handleDeleteAccount = async () => {
     // Permission Check
-    const targetUser = { id: parseInt(id), role: formData.role };
+    const targetUser = { id: targetUserId || parseInt(id), role: formData.role };
     if (!checkPermission(currentUser, PERMISSIONS.DELETE_USER, targetUser)) {
         setStatus({ type: 'error', message: 'Permissão negada para excluir este usuário.' });
         setShowDeleteModal(false);
@@ -182,7 +189,8 @@ const EditUser = () => {
   if (initialLoading || authLoading) return <div className="loading-state">Carregando...</div>;
 
   // Construct target user object for permission checks
-  const targetUser = { id: parseInt(id), role: formData.role };
+  // Use targetUserId if available (from fetch), otherwise fallback (might be unsafe if not resolved yet, but initialLoading blocks)
+  const targetUser = { id: targetUserId, role: formData.role };
   
   // Calculate permissions
   const canEditUsername = checkPermission(currentUser, PERMISSIONS.EDIT_USERNAME, targetUser);

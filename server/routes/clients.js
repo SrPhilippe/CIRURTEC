@@ -2,6 +2,10 @@ import express from 'express'
 import { randomUUID } from 'crypto'
 import pool from '../db.js'
 import { verifyToken } from '../middleware/auth.js'
+import { nanoid } from 'nanoid'
+import Hashids from 'hashids'
+
+const hashids = new Hashids('cirurtec-equipments', 8)
 
 const router = express.Router()
 
@@ -19,13 +23,14 @@ router.post('/', verifyToken, async (req, res) => {
         connection = await pool.getConnection()
         await connection.beginTransaction()
 
-        // Generate UUID for client
+        // Generate UUID for client and public_ID
         const clientId = randomUUID()
+        const clientPublicId = nanoid()
 
         // Insert client
         await connection.query(
             `INSERT INTO clients 
-       (id, cnpj, nome_hospital, nome_fantasia, email1, email2, contato1, contato2, tipo_cliente) 
+       (id, cnpj, nome_hospital, nome_fantasia, email1, email2, contato1, contato2, public_ID) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 clientId,
@@ -36,7 +41,7 @@ router.post('/', verifyToken, async (req, res) => {
                 clientData.email2 || null,
                 clientData.contato1,
                 clientData.contato2 || null,
-                clientData.tipoCliente
+                clientPublicId
             ]
         )
 
@@ -46,18 +51,22 @@ router.post('/', verifyToken, async (req, res) => {
                 // Skip empty equipment entries
                 if (!equipment.equipamento && !equipment.modelo) continue
 
-                const equipmentId = randomUUID()
+                // Generate HashID for equipment ID
+                const uniqueSeed = Date.now() + Math.floor(Math.random() * 1000)
+                const equipmentId = hashids.encode(uniqueSeed)
+
                 await connection.query(
                     `INSERT INTO equipments 
-           (id, client_id, equipamento, modelo, numero_serie, data_nota) 
-           VALUES (?, ?, ?, ?, ?, ?)`,
+           (id, client_id, equipamento, modelo, numero_serie, data_nota, tipo_instalacao) 
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
                     [
                         equipmentId,
                         clientId,
                         equipment.equipamento,
                         equipment.modelo,
                         equipment.numeroSerie || null,
-                        equipment.dataNota || null
+                        equipment.dataNota || null,
+                        equipment.tipoInstalacao || 'CEMIG'
                     ]
                 )
             }
@@ -90,38 +99,10 @@ router.post('/', verifyToken, async (req, res) => {
     }
 })
 
-// Check if CNPJ exists
+// Check if CNPJ exists (and return ID if needed)
 router.get('/check-cnpj/:cnpj', verifyToken, async (req, res) => {
     try {
-        const cleanCNPJ = req.params.cnpj.replace(/\D/g, '') // Basic cleanup just in case
-        // We need to match how it's stored. The valid CNPJ in DB seems to be stored with mask based on formatCNPJ usage in frontend, 
-        // BUT wait. In `clients.js` line 32: `clientData.cnpj` is passed.
-        // In `NovoCadastro.jsx` `handleClientChange`: `formattedValue = formatCNPJ(value)`.
-        // So the DB likely stores formatted CNPJ "00.000.000/0000-00".
-        // However, the `fetchCNPJData` in frontend cleans it before sending to BrasilAPI.
-        // Let's check `NovoCadastro.jsx` again.
-        // Line 137: `const cleanCNPJ = cnpj.replace(/\D/g, '');` -> sends clean to BrasilAPI.
-        // Line 244: `formattedValue = formatCNPJ(value);` -> state stores formatted.
-        // Line 291 handleSubmit -> sends clientData.cnpj (formatted).
-        // So DB has formatted strings.
-        // My new endpoint should probably handle both or expect one. 
-        // Let's stick to expecting the value passed from frontend. 
-        // If frontend sends clean digits, I need to format it to query DB, OR I should strip DB columns for comparison (inefficient).
-        // Better: Frontend will likely send the clean digits to check, so I construct the formatted version here OR check 'LIKE' query?
-        // Actually, let's just make the frontend send the clean version to this endpoint, and I'll match it against the DB. 
-        // Wait, if DB stores formatted "XX.XXX.XXX/YYYY-ZZ", and I receive "XXXXXXXXYYYYZZ", I can't easily query.
-        // I should probably check if I can format it here.
-        // Re-reading `clients.js`:
-        /*
-           169:   const formatCNPJ = (value) => {
-           170:     return value
-           171:       .replace(/\D/g, '')
-           172:       .replace(/^(\d{2})(\d)/, '$1.$2')
-           ...
-        */
-        // I should duplicate this logic or flexible search. 
-        // Flexible search: `WHERE REPLACE(REPLACE(REPLACE(cnpj, '.', ''), '/', ''), '-', '') = ?`
-        // This is robust.
+        const cleanCNPJ = req.params.cnpj.replace(/\D/g, '')
 
         const [clients] = await pool.query(
             "SELECT id FROM clients WHERE REPLACE(REPLACE(REPLACE(cnpj, '.', ''), '/', ''), '-', '') = ?",
@@ -139,6 +120,35 @@ router.get('/check-cnpj/:cnpj', verifyToken, async (req, res) => {
     }
 })
 
+// Helper to find client ID from param (UUID, public_ID, or CNPJ)
+const resolveClientId = async (param) => {
+    // 1. If it looks like UUID, try UUID first
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(param)) {
+        return param
+    }
+
+    // 2. Try strict match on public_ID (21 chars) OR clean CNPJ lookup
+    const cleanParam = param.replace(/\D/g, '')
+
+    // Construct query to search all 3 possibilities for robustness
+    // If it's a CNPJ (mostly digits), cleanParam will be populated
+    // If it's public_ID, param is preserved
+
+    let query = "SELECT id FROM clients WHERE id = ? OR public_ID = ?"
+    let params = [param, param]
+
+    if (cleanParam.length > 5) { // Assuming CNPJ part has significant digits
+        query += " OR REPLACE(REPLACE(REPLACE(cnpj, '.', ''), '/', ''), '-', '') = ?"
+        params.push(cleanParam)
+    }
+
+    // Execute search
+    const [clients] = await pool.query(query, params)
+
+    if (clients.length > 0) return clients[0].id
+    return null
+}
+
 // Get all clients with their equipment (for filtering)
 router.get('/', verifyToken, async (req, res) => {
     try {
@@ -147,9 +157,11 @@ router.get('/', verifyToken, async (req, res) => {
                 c.*, 
                 JSON_ARRAYAGG(
                     JSON_OBJECT(
+                        'id', e.id,
                         'equipamento', e.equipamento, 
                         'modelo', e.modelo, 
-                        'numero_serie', e.numero_serie
+                        'numero_serie', e.numero_serie,
+                        'tipo_instalacao', e.tipo_instalacao
                     )
                 ) as equipments_json 
             FROM clients c 
@@ -174,16 +186,22 @@ router.get('/', verifyToken, async (req, res) => {
     }
 })
 
-// Get client by ID with equipment
+// Get client by ID (or public_ID/CNPJ) with equipment
 router.get('/:id', verifyToken, async (req, res) => {
     try {
-        const [clients] = await pool.query('SELECT * FROM clients WHERE id = ?', [req.params.id])
+        const id = await resolveClientId(req.params.id)
+
+        if (!id) {
+            return res.status(404).json({ message: 'Cliente não encontrado' })
+        }
+
+        const [clients] = await pool.query('SELECT * FROM clients WHERE id = ?', [id])
 
         if (clients.length === 0) {
             return res.status(404).json({ message: 'Cliente não encontrado' })
         }
 
-        const [equipments] = await pool.query('SELECT * FROM equipments WHERE client_id = ?', [req.params.id])
+        const [equipments] = await pool.query('SELECT * FROM equipments WHERE client_id = ?', [id])
 
         res.json({
             client: clients[0],
@@ -201,6 +219,9 @@ router.put('/:id', verifyToken, async (req, res) => {
     let connection
 
     try {
+        const id = await resolveClientId(req.params.id)
+        if (!id) return res.status(404).json({ message: 'Cliente não encontrado' })
+
         if (!clientData.cnpj || !clientData.nomeHospital || !clientData.email1 || !clientData.contato1) {
             return res.status(400).json({ message: 'Campos obrigatórios faltando' })
         }
@@ -209,7 +230,7 @@ router.put('/:id', verifyToken, async (req, res) => {
         await connection.beginTransaction()
 
         // Security Check: Fetch current client data to compare CNPJ
-        const [currentClientRows] = await connection.query('SELECT cnpj FROM clients WHERE id = ?', [req.params.id])
+        const [currentClientRows] = await connection.query('SELECT cnpj FROM clients WHERE id = ?', [id])
 
         if (currentClientRows.length === 0) {
             await connection.rollback() // clean up transaction if client not found
@@ -235,7 +256,7 @@ router.put('/:id', verifyToken, async (req, res) => {
         // Update client info
         await connection.query(
             `UPDATE clients 
-       SET cnpj = ?, nome_hospital = ?, nome_fantasia = ?, email1 = ?, email2 = ?, contato1 = ?, contato2 = ?, tipo_cliente = ?
+       SET cnpj = ?, nome_hospital = ?, nome_fantasia = ?, email1 = ?, email2 = ?, contato1 = ?, contato2 = ?
        WHERE id = ?`,
             [
                 clientData.cnpj,
@@ -245,30 +266,32 @@ router.put('/:id', verifyToken, async (req, res) => {
                 clientData.email2 || null,
                 clientData.contato1,
                 clientData.contato2 || null,
-                clientData.tipoCliente,
-                req.params.id
+                id
             ]
         )
 
         // Update equipments: Delete all and re-insert (simplest strategy to handle adds/removes/edits)
-        await connection.query('DELETE FROM equipments WHERE client_id = ?', [req.params.id])
+        await connection.query('DELETE FROM equipments WHERE client_id = ?', [id])
 
         if (equipments && equipments.length > 0) {
             for (const equipment of equipments) {
                 if (!equipment.equipamento && !equipment.modelo) continue
 
-                const equipmentId = randomUUID()
+                const uniqueSeed = Date.now() + Math.floor(Math.random() * 1000)
+                const equipmentId = hashids.encode(uniqueSeed)
+
                 await connection.query(
                     `INSERT INTO equipments 
-           (id, client_id, equipamento, modelo, numero_serie, data_nota) 
-           VALUES (?, ?, ?, ?, ?, ?)`,
+           (id, client_id, equipamento, modelo, numero_serie, data_nota, tipo_instalacao) 
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
                     [
                         equipmentId,
-                        req.params.id,
+                        id,
                         equipment.equipamento,
                         equipment.modelo,
                         equipment.numeroSerie || null,
-                        equipment.dataNota || null
+                        equipment.dataNota || null,
+                        equipment.tipoInstalacao || 'CEMIG'
                     ]
                 )
             }
@@ -294,14 +317,17 @@ router.delete('/:id', verifyToken, async (req, res) => {
     let connection
 
     try {
+        const id = await resolveClientId(req.params.id)
+        if (!id) return res.status(404).json({ message: 'Cliente não encontrado' })
+
         connection = await pool.getConnection()
         await connection.beginTransaction()
 
         // Delete equipments first (foreign key constraint)
-        await connection.query('DELETE FROM equipments WHERE client_id = ?', [req.params.id])
+        await connection.query('DELETE FROM equipments WHERE client_id = ?', [id])
 
         // Delete client
-        const [result] = await connection.query('DELETE FROM clients WHERE id = ?', [req.params.id])
+        const [result] = await connection.query('DELETE FROM clients WHERE id = ?', [id])
 
         if (result.affectedRows === 0) {
             await connection.rollback()

@@ -62,12 +62,12 @@ export default function NovoCadastro() {
     email1: '',
     email2: '',
     contato1: '',
-    contato2: '',
-    tipoCliente: 'CEMIG' // Default
+    contato1: '',
+    contato2: ''
   });
 
   const [equipments, setEquipments] = useState([
-    { id: 1, equipamento: '', modelo: '', numeroSerie: '', dataNota: '' }
+    { id: 1, equipamento: '', modelo: '', numeroSerie: '', dataNota: '', tipoInstalacao: 'CEMIG' }
   ]);
 
   const [errors, setErrors] = useState({});
@@ -96,10 +96,9 @@ export default function NovoCadastro() {
         email1: '',
         email2: '',
         contato1: '',
-        contato2: '',
-        tipoCliente: 'CEMIG'
+        contato2: ''
       });
-      setEquipments([{ id: 1, equipamento: '', modelo: '', numeroSerie: '', dataNota: '' }]);
+      setEquipments([{ id: 1, equipamento: '', modelo: '', numeroSerie: '', dataNota: '', tipoInstalacao: 'CEMIG' }]);
       setErrors({});
       setSuccessMessage('');
       setErrorMessage('');
@@ -132,8 +131,8 @@ export default function NovoCadastro() {
         email1: client.email1,
         email2: client.email2 || '',
         contato1: client.contato1,
-        contato2: client.contato2 || '',
-        tipoCliente: client.tipo_cliente
+        contato1: client.contato1,
+        contato2: client.contato2 || ''
       });
 
       if (clientEquipments && clientEquipments.length > 0) {
@@ -141,8 +140,10 @@ export default function NovoCadastro() {
             id: eq.id,
             equipamento: eq.equipamento,
             modelo: eq.modelo,
+            modelo: eq.modelo,
             numeroSerie: eq.numero_serie, // Map from snake_case
-            dataNota: (eq.data_nota && !isNaN(new Date(eq.data_nota).getTime())) ? new Date(eq.data_nota).toISOString().split('T')[0] : ''
+            dataNota: (eq.data_nota && !isNaN(new Date(eq.data_nota).getTime())) ? new Date(eq.data_nota).toISOString().split('T')[0] : '',
+            tipoInstalacao: eq.tipo_instalacao || 'CEMIG'
         })));
       }
     } catch (error) {
@@ -327,7 +328,8 @@ export default function NovoCadastro() {
   const addEquipment = () => {
     setEquipments(prev => [
       ...prev,
-      { id: Date.now(), equipamento: '', modelo: '', numeroSerie: '', dataNota: '' }
+      ...prev,
+      { id: Date.now(), equipamento: '', modelo: '', numeroSerie: '', dataNota: '', tipoInstalacao: 'CEMIG' }
     ]);
   };
 
@@ -429,10 +431,10 @@ export default function NovoCadastro() {
             email1: '',
             email2: '',
             contato1: '',
-            contato2: '',
-            tipoCliente: 'CEMIG'
+            contato1: '',
+            contato2: ''
         });
-        setEquipments([{ id: 1, equipamento: '', modelo: '', numeroSerie: '', dataNota: '' }]);
+        setEquipments([{ id: 1, equipamento: '', modelo: '', numeroSerie: '', dataNota: '', tipoInstalacao: 'CEMIG' }]);
       }
       setErrors({});
 
@@ -545,20 +547,7 @@ export default function NovoCadastro() {
                   />
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label">Tipo de Cliente *</label>
-                  <select 
-                    name="tipoCliente" 
-                    value={clientData.tipoCliente}
-                    onChange={handleClientChange}
-                    required
-                    className="form-select"
-                  >
-                    <option value="BAUMER">BAUMER</option>
-                    <option value="CIRURTEC">CIRURTEC</option>
-                    <option value="CEMIG">CEMIG</option>
-                  </select>
-                </div>
+
 
                 <div className="form-group">
                   <label className="form-label">E-mail 1 *</label>
@@ -626,6 +615,7 @@ export default function NovoCadastro() {
                       <th>Equipamento</th>
                       <th>Modelo</th>
                       <th>Número de Série</th>
+                      <th>Tipo</th>
                       <th>Data Nota Fiscal</th>
                       <th style={{ width: '50px' }}></th>
                     </tr>
@@ -661,6 +651,18 @@ export default function NovoCadastro() {
                             placeholder="SN123456"
                             className="table-input"
                           />
+                        </td>
+                        <td>
+                          <select 
+                            value={eq.tipoInstalacao} 
+                            onChange={(e) => handleEquipmentChange(eq.id, 'tipoInstalacao', e.target.value)}
+                            className="table-input"
+                            style={{ padding: '8px' }}
+                          >
+                            <option value="CEMIG">CEMIG</option>
+                            <option value="CIRURTEC">CIRURTEC</option>
+                            <option value="BAUMER">BAUMER</option>
+                          </select>
                         </td>
                         <td>
                           <DatePicker
@@ -723,14 +725,7 @@ export default function NovoCadastro() {
                     <label className="form-label">Nome do Hospital</label>
                     <div className="document-value">{clientData.nomeFantasia || '-'}</div>
                 </div>
-                <div className="form-group">
-                    <label className="form-label">Tipo de Cliente</label>
-                    <div className="document-value">
-                        <span className={`badge badge-${clientData.tipoCliente?.toLowerCase()}`}>
-                          {clientData.tipoCliente}
-                        </span>
-                    </div>
-                </div>
+
                 <div className="form-group">
                     <label className="form-label">E-mail 1</label>
                     <div className="document-value">{clientData.email1 || '-'}</div>
@@ -759,6 +754,7 @@ export default function NovoCadastro() {
                       <th>Equipamento</th>
                       <th>Modelo</th>
                       <th>Número de Série</th>
+                      <th>Tipo</th>
                       <th>Data Nota Fiscal</th>
                     </tr>
                   </thead>
@@ -768,6 +764,11 @@ export default function NovoCadastro() {
                         <td>{eq.equipamento || '-'}</td>
                         <td>{eq.modelo || '-'}</td>
                         <td>{eq.numeroSerie || '-'}</td>
+                        <td>
+                             <span className={`badge badge-${eq.tipoInstalacao?.toLowerCase()}`}>
+                                {eq.tipoInstalacao}
+                             </span>
+                        </td>
                         <td>{eq.dataNota ? eq.dataNota.split('-').reverse().join('/') : '-'}</td>
                       </tr>
                     ))}
