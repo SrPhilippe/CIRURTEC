@@ -52,8 +52,7 @@ router.post('/', verifyToken, async (req, res) => {
                 if (!equipment.equipamento && !equipment.modelo) continue
 
                 // Generate HashID for equipment ID
-                const uniqueSeed = Date.now() + Math.floor(Math.random() * 1000)
-                const equipmentId = hashids.encode(uniqueSeed)
+                const equipmentId = hashids.encode(Date.now() + Math.floor(Math.random() * 100000))
 
                 await connection.query(
                     `INSERT INTO equipments 
@@ -277,8 +276,7 @@ router.put('/:id', verifyToken, async (req, res) => {
             for (const equipment of equipments) {
                 if (!equipment.equipamento && !equipment.modelo) continue
 
-                const uniqueSeed = Date.now() + Math.floor(Math.random() * 1000)
-                const equipmentId = hashids.encode(uniqueSeed)
+                const equipmentId = hashids.encode(Date.now() + Math.floor(Math.random() * 100000))
 
                 await connection.query(
                     `INSERT INTO equipments 

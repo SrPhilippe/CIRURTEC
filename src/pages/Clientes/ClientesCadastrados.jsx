@@ -315,7 +315,7 @@ export default function ClientesCadastrados() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="3" className="text-center">
+                    <td colSpan="3">
                       {searchTerm ? 'Nenhum cliente encontrado.' : 'Nenhum cliente cadastrado.'}
                     </td>
                   </tr>

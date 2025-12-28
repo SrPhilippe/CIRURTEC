@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
-import { Building2, Plus, Save, Trash2, Printer, ArrowLeft, Edit, X } from 'lucide-react';
+import { Building2, Plus, Save, Trash2, Printer, ArrowLeft, Edit, X, ChevronDown } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import { checkPermission, PERMISSIONS } from '../../utils/permissions';
 import './Clientes.css';
@@ -67,9 +67,10 @@ export default function NovoCadastro() {
   });
 
   const [equipments, setEquipments] = useState([
-    { id: 1, equipamento: '', modelo: '', numeroSerie: '', dataNota: '', tipoInstalacao: 'CEMIG' }
+    { id: 1, equipamento: '', modelo: '', numeroSerie: '', dataNota: '', tipoInstalacao: 'BAUMER' }
   ]);
 
+  const [expandedEquipment, setExpandedEquipment] = useState(null);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
@@ -140,10 +141,9 @@ export default function NovoCadastro() {
             id: eq.id,
             equipamento: eq.equipamento,
             modelo: eq.modelo,
-            modelo: eq.modelo,
             numeroSerie: eq.numero_serie, // Map from snake_case
             dataNota: (eq.data_nota && !isNaN(new Date(eq.data_nota).getTime())) ? new Date(eq.data_nota).toISOString().split('T')[0] : '',
-            tipoInstalacao: eq.tipo_instalacao || 'CEMIG'
+            tipoInstalacao: eq.tipo_instalacao || 'BAUMER'
         })));
       }
     } catch (error) {
@@ -222,6 +222,46 @@ export default function NovoCadastro() {
       .replace(/^(\d{2})(\d)/, '$1/$2')
       .replace(/^(\d{2})\/(\d{2})(\d)/, '$1/$2/$3')
       .replace(/(\d{4})\d+?$/, '$1');
+  };
+
+  const calculateMaintenanceDates = (invoiceDate) => {
+    if (!invoiceDate) return { threeMonths: '-', sixMonths: '-', nineMonths: '-', twelveMonths: '-' };
+    
+    const date = new Date(invoiceDate + 'T00:00:00');
+    
+    const addDays = (date, days) => {
+      const result = new Date(date);
+      result.setDate(result.getDate() + days);
+      return result.toLocaleDateString('pt-BR');
+    };
+    
+    return {
+      threeMonths: addDays(date, 90),
+      sixMonths: addDays(date, 180),
+      nineMonths: addDays(date, 270),
+      twelveMonths: addDays(date, 365)
+    };
+  };
+
+  const calculateRemainingWarranty = (invoiceDate) => {
+    if (!invoiceDate) return '-';
+    
+    const startDate = new Date(invoiceDate + 'T00:00:00');
+    const endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + 365);
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const diffTime = endDate - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays <= 0) return 'Garantia Expirada';
+    return `${diffDays} dias`;
+  };
+
+  const toggleEquipmentExpand = (equipmentId) => {
+    setExpandedEquipment(prev => prev === equipmentId ? null : equipmentId);
   };
 
   const validateEmail = (email) => {
@@ -328,8 +368,7 @@ export default function NovoCadastro() {
   const addEquipment = () => {
     setEquipments(prev => [
       ...prev,
-      ...prev,
-      { id: Date.now(), equipamento: '', modelo: '', numeroSerie: '', dataNota: '', tipoInstalacao: 'CEMIG' }
+      { id: Date.now(), equipamento: '', modelo: '', numeroSerie: '', dataNota: '', tipoInstalacao: 'BAUMER' }
     ]);
   };
 
@@ -659,9 +698,9 @@ export default function NovoCadastro() {
                             className="table-input"
                             style={{ padding: '8px' }}
                           >
-                            <option value="CEMIG">CEMIG</option>
-                            <option value="CIRURTEC">CIRURTEC</option>
                             <option value="BAUMER">BAUMER</option>
+                            <option value="CIRURTEC">CIRURTEC</option>
+                            <option value="CEMIG">CEMIG</option>
                           </select>
                         </td>
                         <td>
@@ -748,7 +787,7 @@ export default function NovoCadastro() {
             <div className="client-form-card equipments-section">
               <h2 className="form-section-title">Equipamentos Instalados</h2>
               <div className="table-responsive">
-                <table className="clients-table">
+                <table className="clients-table register">
                   <thead>
                     <tr>
                       <th>Equipamento</th>
@@ -756,22 +795,82 @@ export default function NovoCadastro() {
                       <th>Número de Série</th>
                       <th>Tipo</th>
                       <th>Data Nota Fiscal</th>
+                      <th>Garantia</th>
+                      <th style={{ width: '50px' }}></th>
                     </tr>
                   </thead>
                   <tbody>
-                    {equipments.map((eq) => (
-                      <tr key={eq.id}>
-                        <td>{eq.equipamento || '-'}</td>
-                        <td>{eq.modelo || '-'}</td>
-                        <td>{eq.numeroSerie || '-'}</td>
-                        <td>
-                             <span className={`badge badge-${eq.tipoInstalacao?.toLowerCase()}`}>
+                    {equipments.map((eq) => {
+                      const maintenanceDates = calculateMaintenanceDates(eq.dataNota);
+                      const remainingWarranty = calculateRemainingWarranty(eq.dataNota);
+                      const isExpanded = expandedEquipment === eq.id;
+                      
+                      return (
+                        <React.Fragment key={eq.id}>
+                          <tr>
+                            <td>{eq.equipamento || '-'}</td>
+                            <td>{eq.modelo || '-'}</td>
+                            <td>{eq.numeroSerie || '-'}</td>
+                            <td>
+                              <span className={`badge badge-${eq.tipoInstalacao?.toLowerCase()}`}>
                                 {eq.tipoInstalacao}
-                             </span>
-                        </td>
-                        <td>{eq.dataNota ? eq.dataNota.split('-').reverse().join('/') : '-'}</td>
-                      </tr>
-                    ))}
+                              </span>
+                            </td>
+                            <td>{eq.dataNota ? eq.dataNota.split('-').reverse().join('/') : '-'}</td>
+                            <td style={{ fontWeight: '600', color: remainingWarranty === 'Garantia Expirada' ? '#dc2626' : '#059669' }}>
+                              {remainingWarranty}
+                            </td>
+                            <td>
+                              <button
+                                type="button"
+                                onClick={() => toggleEquipmentExpand(eq.id)}
+                                className="btn-expand-equipment"
+                                title="Ver cronograma de troca de peças"
+                              >
+                                <ChevronDown 
+                                  size={20} 
+                                  style={{ 
+                                    transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                                    transition: 'transform 0.2s'
+                                  }} 
+                                />
+                              </button>
+                            </td>
+                          </tr>
+                          {isExpanded && (
+                            <tr className="equipment-details-row">
+                              <td colSpan="7">
+                                <div className="maintenance-schedule">
+                                  <h3 className="maintenance-title">Troca de Peças</h3>
+                                  <div className="maintenance-table-wrapper">
+                                    <table className="maintenance-table">
+                                      <thead>
+                                        <tr>
+                                          <th>Data NF</th>
+                                          <th>3 Meses</th>
+                                          <th>6 Meses</th>
+                                          <th>9 Meses</th>
+                                          <th>12 Meses</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        <tr>
+                                          <td>{eq.dataNota ? eq.dataNota.split('-').reverse().join('/') : '-'}</td>
+                                          <td>{maintenanceDates.threeMonths}</td>
+                                          <td>{maintenanceDates.sixMonths}</td>
+                                          <td>{maintenanceDates.nineMonths}</td>
+                                          <td>{maintenanceDates.twelveMonths}</td>
+                                        </tr>
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

@@ -488,19 +488,26 @@
 
 .clients-table th,
 .clients-table td {
-    padding: 1rem 1.5rem;
-    text-align: left;
+    padding: 0.75rem 1rem;
     border-bottom: 1px solid var(--border);
     color: var(--text-primary);
+    font-size: 0.9rem;
+    text-align: left;
 }
+
+.clients-table.register th,
+.clients-table.register td {
+    text-align: center;
+}
+
 
 .clients-table th {
     background-color: #f8fafc;
     font-weight: 600;
     color: var(--text-secondary);
-    font-size: 0.875rem;
+    font-size: 0.8rem;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.02em;
 }
 
 .clients-table tr:last-child td {
@@ -630,4 +637,95 @@
 .btn-delete-account:hover {
     background-color: #fecaca;
     border-color: #f87171;
+}
+
+/* Equipment Dropdown Styles */
+.btn-expand-equipment {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 0.375rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.btn-expand-equipment:hover {
+    background-color: #eff6ff;
+    color: var(--primary);
+}
+
+.equipment-details-row {
+    background-color: #f8fafc;
+}
+
+.equipment-details-row td {
+    padding: 0.65rem 0.5rem;
+    border-bottom: none !important;
+}
+
+.maintenance-schedule {
+    padding: 2rem;
+    animation: slideDown 0.3s ease-out;
+}
+
+.maintenance-title {
+    background-color: var(--primary);
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 0.3rem;
+    padding: 0.6rem 0;
+    opacity: 0.8;
+    border-radius: 0.5rem;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.maintenance-table-wrapper {
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+.maintenance-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+}
+
+.maintenance-table th,
+.maintenance-table td {
+    padding: 0.75rem 1rem;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+}
+
+.maintenance-table th {
+    background-color: transparent;
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    padding: 0.5rem 1rem;
+}
+
+.maintenance-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.maintenance-table tbody td {
+    color: var(--text-primary);
+    font-weight: 400;
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+}
+
+.maintenance-table tbody tr:hover {
+    background-color: #f8fafc;
 }
