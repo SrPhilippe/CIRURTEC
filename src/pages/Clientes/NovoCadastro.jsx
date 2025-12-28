@@ -70,6 +70,9 @@ export default function NovoCadastro() {
     { id: 1, equipamento: '', modelo: '', numeroSerie: '', dataNota: '', tipoInstalacao: 'BAUMER' }
   ]);
 
+  const [equipmentTypes, setEquipmentTypes] = useState([]); // Store hierarchy
+
+
   const [expandedEquipment, setExpandedEquipment] = useState(null);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
@@ -105,6 +108,19 @@ export default function NovoCadastro() {
       setErrorMessage('');
     }
   }, [id]);
+
+  // Fetch Equipment Hierarchy
+  useEffect(() => {
+    const fetchHierarchy = async () => {
+        try {
+            const response = await api.get('/equipment-settings/types');
+            setEquipmentTypes(response.data);
+        } catch (error) {
+            console.error('Error fetching equipment hierarchy:', error);
+        }
+    };
+    fetchHierarchy();
+  }, []);
 
   // Check for duplicate CNPJ warning from navigation state
   useEffect(() => {
@@ -341,7 +357,7 @@ export default function NovoCadastro() {
     let formattedValue = value;
     
     // Enforce Uppercase on equipment text fields
-    if (['equipamento', 'modelo', 'numeroSerie'].includes(field)) {
+    if (['numeroSerie'].includes(field)) { // Removed equipamento/modelo from automatic uppercase since they are now selects (but values are already upper)
         formattedValue = value.toUpperCase();
     }
 
@@ -360,9 +376,18 @@ export default function NovoCadastro() {
         }
     }
 
-    setEquipments(prev => prev.map(eq => 
-      eq.id === id ? { ...eq, [field]: formattedValue } : eq
-    ));
+    setEquipments(prev => prev.map(eq => {
+      if (eq.id === id) {
+          const updates = { [field]: formattedValue };
+          
+          // If changing Equipment Type, clear the Model
+          if (field === 'equipamento') {
+              updates.modelo = '';
+          }
+          return { ...eq, ...updates };
+      }
+      return eq;
+    }));
   };
 
   const addEquipment = () => {
@@ -663,29 +688,39 @@ export default function NovoCadastro() {
                     {equipments.map((eq) => (
                       <tr key={eq.id}>
                         <td>
-                          <input 
-                            type="text" 
+                          <select
                             value={eq.equipamento}
                             onChange={(e) => handleEquipmentChange(eq.id, 'equipamento', e.target.value)}
-                            placeholder="Ex: Termodesinfectora"
                             className={`table-input ${errors[`eq-${eq.id}-equipamento`] ? 'input-error' : ''}`}
-                          />
+                            style={{ padding: '8px' }}
+                          >
+                            <option value="">Selecione...</option>
+                            {equipmentTypes.map(type => (
+                                <option key={type.id} value={type.name}>{type.name}</option>
+                            ))}
+                          </select>
                           {errors[`eq-${eq.id}-equipamento`] && <span className="error-text">{errors[`eq-${eq.id}-equipamento`]}</span>}
                         </td>
                         <td>
-                          <input 
-                            type="text" 
+                          <select
                             value={eq.modelo}
                             onChange={(e) => handleEquipmentChange(eq.id, 'modelo', e.target.value)}
-                            placeholder="Ex: XYZ-2000"
                             className={`table-input ${errors[`eq-${eq.id}-modelo`] ? 'input-error' : ''}`}
-                          />
+                            style={{ padding: '8px' }}
+                            disabled={!eq.equipamento}
+                          >
+                            <option value="">Selecione...</option>
+                            {equipmentTypes.find(t => t.name === eq.equipamento)?.models.map(model => (
+                                <option key={model.id} value={model.name}>{model.name}</option>
+                            ))}
+                          </select>
                           {errors[`eq-${eq.id}-modelo`] && <span className="error-text">{errors[`eq-${eq.id}-modelo`]}</span>}
                         </td>
                         <td>
                           <input 
                             type="text" 
-                            value={eq.numeroSerie}
+                            name={`numeroSerie-${eq.id}`}
+                            value={eq.numeroSerie} 
                             onChange={(e) => handleEquipmentChange(eq.id, 'numeroSerie', e.target.value)}
                             placeholder="SN123456"
                             className="table-input"

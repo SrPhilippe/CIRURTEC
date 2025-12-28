@@ -3,6 +3,7 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import authRoutes from './routes/auth.js'
 import clientsRoutes from './routes/clients.js'
+import equipmentSettingsRoutes from './routes/equipmentSettings.js' // Added
 
 dotenv.config()
 
@@ -16,6 +17,7 @@ app.use(express.json())
 // Routes
 app.use('/api/auth', authRoutes)
 app.use('/api/clients', clientsRoutes)
+app.use('/api/equipment-settings', equipmentSettingsRoutes) // Added
 
 app.get('/', (req, res) => {
     res.send('CIRURTEC API is running')

@@ -12,6 +12,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Perfil from './pages/Perfil'; // Added
 import Users from './pages/Users';
 import EditUser from './pages/EditUser';
+import Equipamentos from './pages/Configuracoes/Equipamentos'; // Added
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
                <Route path="/clientes/editar/:id" element={<NovoCadastro />} />
                <Route path="/clientes/:id" element={<NovoCadastro />} />
                <Route path="/perfil" element={<Perfil />} /> {/* Profile Route */}
+               <Route path="/configuracoes/equipamentos" element={<Equipamentos />} /> {/* Equipment Settings */}
              </Route>
           </Route>
 
