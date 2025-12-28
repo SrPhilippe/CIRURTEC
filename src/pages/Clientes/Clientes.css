@@ -537,16 +537,15 @@
 }
 
 .badge-cemig {
-    background-color: #e2ffe0;
-    color: #3b8b35;
-    border: 1px solid #98d894;
+    color: #008235;
+    border: 1px solid #b9f8cf;
+    background-color: #dcfce7;
 }
 
 .badge-baumer {
-    background-color: #93dbff;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-    color: #ffffff;
-    border: 1px solid #0094de;
+    color: #0069a8;
+    border: 1px solid #b8e6fe;
+    background-color: #dff2fe;
 }
 
 .badge-cirurtec {
