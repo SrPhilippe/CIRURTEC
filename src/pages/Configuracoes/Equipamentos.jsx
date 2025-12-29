@@ -1,16 +1,35 @@
-
-import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Settings, Box, ChevronRight, X, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useContext } from 'react';
+import { Plus, Trash2, Settings, Box, ChevronRight, X, AlertCircle, Edit2, Check } from 'lucide-react';
 import api from '../../services/api';
 import './Equipamentos.css';
+import { AuthContext } from '../../context/AuthContext';
+import DeleteConfirmationModal from '../../components/DeleteConfirmationModal';
 
 const Equipamentos = () => {
+    const { user } = useContext(AuthContext);
     const [types, setTypes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedType, setSelectedType] = useState(null);
     const [newType, setNewType] = useState('');
     const [newModel, setNewModel] = useState('');
     const [error, setError] = useState(null);
+
+    // Edit State
+    const [editingId, setEditingId] = useState(null); // ID of item being edited
+    const [editingType, setEditingType] = useState(null); // 'TYPE' or 'MODEL'
+    const [editValue, setEditValue] = useState('');
+
+    // Delete Modal State
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState(null); // { id, type: 'TYPE'|'MODEL', name }
+
+    // Permissions
+    const isAdmin = user?.rights === 'ADMIN' || user?.role === 'ADMIN';
+    const isMaster = user?.rights === 'Master' || user?.role === 'Master';
+
+    const canManageTypes = isAdmin; // Only Admin can Add/Edit/Delete Types
+    const canManageModels = isAdmin || isMaster; // Admin and Master can Add/Edit Models
+    const canDeleteModel = isAdmin; // Only Admin can Delete Models
 
     useEffect(() => {
         fetchTypes();
@@ -57,33 +76,61 @@ const Equipamentos = () => {
         }
     };
 
-    const handleDeleteType = async (id, e) => {
-        e.stopPropagation();
-        if (!window.confirm('Tem certeza? Isso excluirá todos os modelos associados.')) return;
+    // --- Delete Modal Logic ---
+    const requestDelete = (item, type) => {
+        setItemToDelete({ ...item, type }); // item has id and name
+        setDeleteModalOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!itemToDelete) return;
+
         try {
-            await api.delete(`/equipment-settings/types/${id}`);
-            if (selectedType?.id === id) setSelectedType(null);
+            if (itemToDelete.type === 'TYPE') {
+                await api.delete(`/equipment-settings/types/${itemToDelete.id}`);
+                if (selectedType?.id === itemToDelete.id) setSelectedType(null);
+            } else {
+                await api.delete(`/equipment-settings/models/${itemToDelete.id}`);
+            }
             fetchTypes();
         } catch (err) {
-            setError('Erro ao excluir tipo.');
+            console.error(err);
+            alert('Erro ao excluir: ' + (err.response?.data?.error || err.message));
+        } finally {
+            setDeleteModalOpen(false);
+            setItemToDelete(null);
         }
     };
 
-    const handleDeleteModel = async (id) => {
-        if (!window.confirm('Excluir este modelo?')) return;
+    // Rename Logic
+    const startEditing = (id, type, currentValue) => {
+        setEditingId(id);
+        setEditingType(type);
+        setEditValue(currentValue);
+    };
+
+    const cancelEditing = (e) => {
+        if (e) e.stopPropagation();
+        setEditingId(null);
+        setEditingType(null);
+        setEditValue('');
+    };
+
+    const saveEditing = async (e) => {
+        if (e) e.stopPropagation();
+        if (!editValue.trim()) return;
+
         try {
-            api.delete(`/equipment-settings/models/${id}`);
-            // Optimistic update
-             const updatedType = {
-                ...selectedType,
-                models: selectedType.models.filter(m => m.id !== id)
-            };
-            setSelectedType(updatedType); // Update local state immediately
-            // Also update the main list for consistency on re-select
-             setTypes(types.map(t => t.id === selectedType?.id ? updatedType : t));
+            if (editingType === 'TYPE') {
+                await api.put(`/equipment-settings/types/${editingId}`, { name: editValue });
+            } else {
+                await api.put(`/equipment-settings/models/${editingId}`, { name: editValue });
+            }
+            setEditingId(null);
+            setEditingType(null);
+            fetchTypes();
         } catch (err) {
-             setError('Erro ao excluir modelo.');
-             fetchTypes(); // Revert on error
+            setError(err.response?.data?.error || 'Erro ao renomear.');
         }
     };
 
@@ -111,16 +158,18 @@ const Equipamentos = () => {
                 <div className="column types-column">
                     <h2 className="column-title">Tipos de Equipamento</h2>
                     
-                    <div className="add-item-box">
-                        <input 
-                            type="text" 
-                            value={newType} 
-                            onChange={(e) => setNewType(e.target.value.toUpperCase())}
-                            placeholder="Novo Tipo (ex: OSMOSE)" 
-                            className="input-base"
-                        />
-                        <button onClick={handleAddType} className="btn-add" disabled={!newType.trim()}> <Plus size={20} /> </button>
-                    </div>
+                    {canManageTypes && (
+                        <div className="add-item-box">
+                            <input 
+                                type="text" 
+                                value={newType} 
+                                onChange={(e) => setNewType(e.target.value.toUpperCase())}
+                                placeholder="Novo Tipo (ex: OSMOSE)" 
+                                className="input-base"
+                            />
+                            <button onClick={handleAddType} className="btn-add" disabled={!newType.trim()}> <Plus size={20} /> </button>
+                        </div>
+                    )}
 
                     <div className="items-list">
                         {loading ? <p className="loading-text">Carregando...</p> : types.map(type => (
@@ -129,17 +178,40 @@ const Equipamentos = () => {
                                 className={`hierarchy-node type-node ${selectedType?.id === type.id ? 'active' : ''}`}
                                 onClick={() => setSelectedType(type)}
                             >
-                                <div className="node-content">
-                                    <Box size={18} />
-                                    <span>{type.name}</span>
-                                </div>
-                                <div className="node-actions relative">
-                                    <span className="count-badge">{type.models?.length || 0}</span>
-                                    {selectedType?.id === type.id && <div className="connector-line"></div>}
-                                    <button onClick={(e) => handleDeleteType(type.id, e)} className="btn-delete-node" title="Excluir Tipo">
-                                        <Trash2 size={14} />
-                                    </button>
-                                </div>
+                                {editingId === type.id && editingType === 'TYPE' ? (
+                                    <div className="edit-mode-box" onClick={e => e.stopPropagation()}>
+                                        <input 
+                                            autoFocus
+                                            value={editValue}
+                                            onChange={e => setEditValue(e.target.value.toUpperCase())}
+                                            className="input-edit"
+                                        />
+                                        <button onClick={saveEditing} className="btn-save-edit"><Check size={14}/></button>
+                                        <button onClick={cancelEditing} className="btn-cancel-edit"><X size={14}/></button>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="node-content">
+                                            <Box size={18} />
+                                            <span>{type.name}</span>
+                                        </div>
+                                        <div className="node-actions relative" onClick={(e) => e.stopPropagation()}>
+                                            <span className="count-badge">{type.models?.length || 0}</span>
+                                            {selectedType?.id === type.id && <div className="connector-line"></div>}
+                                            
+                                            {canManageTypes && (
+                                                <>
+                                                    <button onClick={() => startEditing(type.id, 'TYPE', type.name)} className="btn-action-node btn-edit" title="Renomear Tipo">
+                                                        <Edit2 size={14} />
+                                                    </button>
+                                                    <button onClick={() => requestDelete(type, 'TYPE')} className="btn-action-node btn-delete" title="Excluir Tipo">
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         ))}
                         {!loading && types.length === 0 && <p className="empty-text">Nenhum tipo cadastrado.</p>}
@@ -163,27 +235,53 @@ const Equipamentos = () => {
                                 </span>
                             </div>
 
-                            <div className="add-item-box">
-                                <input 
-                                    type="text" 
-                                    value={newModel} 
-                                    onChange={(e) => setNewModel(e.target.value.toUpperCase())}
-                                    placeholder="Novo Modelo (ex: H0100-020)" 
-                                    className="input-base"
-                                />
-                                <button onClick={handleAddModel} className="btn-add" disabled={!newModel.trim()}> <Plus size={20} /> </button>
-                            </div>
+                            {canManageModels && (
+                                <div className="add-item-box">
+                                    <input 
+                                        type="text" 
+                                        value={newModel} 
+                                        onChange={(e) => setNewModel(e.target.value.toUpperCase())}
+                                        placeholder="Novo Modelo (ex: H0100-020)" 
+                                        className="input-base"
+                                    />
+                                    <button onClick={handleAddModel} className="btn-add" disabled={!newModel.trim()}> <Plus size={20} /> </button>
+                                </div>
+                            )}
 
                             <div className="items-list">
                                 {selectedType.models?.map(model => (
                                     <div key={model.id} className="hierarchy-node model-node">
-                                        <div className="node-content">
-                                            <div className="w-2 h-2 rounded-full bg-slate-400 mr-3"></div>
-                                            <span>{model.name}</span>
-                                        </div>
-                                        <button onClick={() => handleDeleteModel(model.id)} className="btn-delete-node" title="Excluir Modelo">
-                                            <Trash2 size={14} />
-                                        </button>
+                                        {editingId === model.id && editingType === 'MODEL' ? (
+                                            <div className="edit-mode-box w-full">
+                                                <input 
+                                                    autoFocus
+                                                    value={editValue}
+                                                    onChange={e => setEditValue(e.target.value.toUpperCase())}
+                                                    className="input-edit"
+                                                />
+                                                <button onClick={saveEditing} className="btn-save-edit"><Check size={14}/></button>
+                                                <button onClick={cancelEditing} className="btn-cancel-edit"><X size={14}/></button>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className="node-content">
+                                                    <div className="w-2 h-2 rounded-full bg-slate-400 mr-3"></div>
+                                                    <span>{model.name}</span>
+                                                </div>
+                                                <div className="node-actions" onClick={(e) => e.stopPropagation()}>
+                                                    {canManageModels && (
+                                                        <button onClick={() => startEditing(model.id, 'MODEL', model.name)} className="btn-action-node btn-edit" title="Renomear Modelo">
+                                                            <Edit2 size={14} />
+                                                        </button>
+                                                    )}
+                                                    {canDeleteModel && (
+                                                        <button onClick={() => requestDelete(model, 'MODEL')} className="btn-action-node btn-delete" title="Excluir Modelo">
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 ))}
                                 {selectedType.models?.length === 0 && <p className="empty-text">Nenhum modelo cadastrado para este tipo.</p>}
@@ -196,8 +294,26 @@ const Equipamentos = () => {
                         </div>
                     )}
                 </div>
-
             </div>
+
+            {/* Custom Delete Confirmation Modal */}
+            <DeleteConfirmationModal 
+                isOpen={deleteModalOpen}
+                onClose={() => setDeleteModalOpen(false)}
+                onConfirm={confirmDelete}
+                expectedValue={itemToDelete?.name}
+                title={itemToDelete?.type === 'TYPE' ? "Excluir Tipo de Equipamento" : "Excluir Modelo"}
+                description={
+                    itemToDelete?.type === 'TYPE' 
+                        ? `Atenção: A exclusão do tipo "${itemToDelete?.name}" irá excluir permanentemente TODOS os modelos vinculados a ele.` 
+                        : `Atenção: A exclusão do modelo "${itemToDelete?.name}" é permanente.`
+                }
+                instructionLabel={
+                    <span>Para confirmar a exclusão, digite <strong>{itemToDelete?.name}</strong> abaixo:</span>
+                }
+                inputPlaceholder={`Digite ${itemToDelete?.name}`}
+                confirmButtonText={itemToDelete?.type === 'TYPE' ? "Excluir Tipo" : "Excluir Modelo"}
+            />
         </div>
     );
 };

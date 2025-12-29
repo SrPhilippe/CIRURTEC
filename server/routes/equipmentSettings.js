@@ -127,4 +127,46 @@ router.delete('/models/:id', async (req, res) => {
     }
 })
 
+// PUT update a type name
+router.put('/types/:id', async (req, res) => {
+    const { id } = req.params
+    const { name } = req.body
+    if (!name) return res.status(400).json({ error: 'Name is required' })
+
+    const connection = await pool.getConnection()
+    try {
+        await connection.query('UPDATE equipment_types SET name = ? WHERE id = ?', [name, id])
+        res.json({ id, name })
+    } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({ error: 'Equipment type already exists' })
+        }
+        console.error('Error updating equipment type:', error)
+        res.status(500).json({ error: 'Failed to update equipment type' })
+    } finally {
+        connection.release()
+    }
+})
+
+// PUT update a model name
+router.put('/models/:id', async (req, res) => {
+    const { id } = req.params
+    const { name } = req.body
+    if (!name) return res.status(400).json({ error: 'Name is required' })
+
+    const connection = await pool.getConnection()
+    try {
+        await connection.query('UPDATE equipment_models SET name = ? WHERE id = ?', [name, id])
+        res.json({ id, name })
+    } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({ error: 'Model name already exists for this type' })
+        }
+        console.error('Error updating equipment model:', error)
+        res.status(500).json({ error: 'Failed to update equipment model' })
+    } finally {
+        connection.release()
+    }
+})
+
 export default router

@@ -102,7 +102,7 @@ export default function NovoCadastro() {
         contato1: '',
         contato2: ''
       });
-      setEquipments([{ id: 1, equipamento: '', modelo: '', numeroSerie: '', dataNota: '', tipoInstalacao: 'CEMIG' }]);
+      setEquipments([{ id: 1, equipamento: '', modelo: '', numeroSerie: '', dataNota: '', tipoInstalacao: 'BAUMER' }]);
       setErrors({});
       setSuccessMessage('');
       setErrorMessage('');
@@ -498,7 +498,7 @@ export default function NovoCadastro() {
             contato1: '',
             contato2: ''
         });
-        setEquipments([{ id: 1, equipamento: '', modelo: '', numeroSerie: '', dataNota: '', tipoInstalacao: 'CEMIG' }]);
+        setEquipments([{ id: 1, equipamento: '', modelo: '', numeroSerie: '', dataNota: '', tipoInstalacao: 'BAUMER' }]);
       }
       setErrors({});
 
@@ -691,8 +691,7 @@ export default function NovoCadastro() {
                           <select
                             value={eq.equipamento}
                             onChange={(e) => handleEquipmentChange(eq.id, 'equipamento', e.target.value)}
-                            className={`table-input ${errors[`eq-${eq.id}-equipamento`] ? 'input-error' : ''}`}
-                            style={{ padding: '8px' }}
+                            className={`modern-select ${errors[`eq-${eq.id}-equipamento`] ? 'input-error' : ''}`}
                           >
                             <option value="">Selecione...</option>
                             {equipmentTypes.map(type => (
@@ -705,8 +704,7 @@ export default function NovoCadastro() {
                           <select
                             value={eq.modelo}
                             onChange={(e) => handleEquipmentChange(eq.id, 'modelo', e.target.value)}
-                            className={`table-input ${errors[`eq-${eq.id}-modelo`] ? 'input-error' : ''}`}
-                            style={{ padding: '8px' }}
+                            className={`modern-select ${errors[`eq-${eq.id}-modelo`] ? 'input-error' : ''}`}
                             disabled={!eq.equipamento}
                           >
                             <option value="">Selecione...</option>
@@ -730,8 +728,7 @@ export default function NovoCadastro() {
                           <select 
                             value={eq.tipoInstalacao} 
                             onChange={(e) => handleEquipmentChange(eq.id, 'tipoInstalacao', e.target.value)}
-                            className="table-input"
-                            style={{ padding: '8px' }}
+                            className="modern-select"
                           >
                             <option value="BAUMER">BAUMER</option>
                             <option value="CIRURTEC">CIRURTEC</option>
