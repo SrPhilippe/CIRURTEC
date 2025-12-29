@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
-import { Building2, Plus, Save, Trash2, Printer, ArrowLeft, Edit, X, ChevronDown } from 'lucide-react';
+import { Building2, Plus, Save, Trash2, Printer, ArrowLeft, Edit, X, ChevronDown, Copy, Check } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import { checkPermission, PERMISSIONS } from '../../utils/permissions';
 import './Clientes.css';
@@ -62,7 +62,6 @@ export default function NovoCadastro() {
     email1: '',
     email2: '',
     contato1: '',
-    contato1: '',
     contato2: ''
   });
 
@@ -80,9 +79,12 @@ export default function NovoCadastro() {
   const [errorMessage, setErrorMessage] = useState('');
   const [warningMessage, setWarningMessage] = useState(''); // For duplicate CNPJ warning
   const [loadingCnpj, setLoadingCnpj] = useState(false);
+  const [cnpjCopied, setCnpjCopied] = useState(false);
+  const [email1Copied, setEmail1Copied] = useState(false);
+  const [email2Copied, setEmail2Copied] = useState(false);
   
   // Delete modal states
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null); // { type: 'CLIENT' | 'EQUIPMENT', data: any }
   
   const { user: currentUser } = useContext(AuthContext);
   const canDeleteClient = checkPermission(currentUser, PERMISSIONS.DELETE_CLIENT);
@@ -227,6 +229,21 @@ export default function NovoCadastro() {
       .replace(/\.(\d{3})(\d)/, '.$1/$2')
       .replace(/(\d{4})(\d)/, '$1-$2')
       .replace(/(-\d{2})\d+?$/, '$1');
+  };
+
+  const handleCopyCNPJ = () => {
+    if (!clientData.cnpj) return;
+    const items = clientData.cnpj.replace(/\D/g, '');
+    navigator.clipboard.writeText(items);
+    setCnpjCopied(true);
+    setTimeout(() => setCnpjCopied(false), 2000);
+  };
+
+  const handleCopyText = (text, setCopiedState) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedState(true);
+    setTimeout(() => setCopiedState(false), 2000);
   };
 
   // ... (keeping other helpers same, reusing them from closure if possible or redefining but since this is a big block replace mostly, I need to check where I cut)
@@ -398,22 +415,37 @@ export default function NovoCadastro() {
   };
 
   const removeEquipment = (id) => {
+    // This function is now used to perform the actual state update
     if (equipments.length === 1) return;
     setEquipments(prev => prev.filter(eq => eq.id !== id));
   };
 
+  const handleRequestDeleteEquipment = (eq) => {
+    if (equipments.length === 1) return;
+    setDeleteTarget({ type: 'EQUIPMENT', data: eq });
+  };
+
   const handleDeleteClick = () => {
-    setShowDeleteModal(true);
+    setDeleteTarget({ type: 'CLIENT', data: clientData });
   };
 
   const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+
+    if (deleteTarget.type === 'EQUIPMENT') {
+        removeEquipment(deleteTarget.data.id);
+        setDeleteTarget(null);
+        return;
+    }
+
+    // CLIENT Deletion
     try {
       await api.delete(`/clients/${id}`);
       navigate('/clientes/lista');
     } catch (error) {
       console.error('Erro ao excluir cliente:', error);
       setErrorMessage('Erro ao excluir cliente. Tente novamente.');
-      setShowDeleteModal(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -755,7 +787,7 @@ export default function NovoCadastro() {
                           { !isViewMode && canDeleteEquipment && (
                         <button 
                           type="button" 
-                          onClick={() => removeEquipment(eq.id)}
+                          onClick={() => handleRequestDeleteEquipment(eq)}
                           className="btn-icon-danger"
                           title="Remover Equipamento"
                         >
@@ -786,7 +818,28 @@ export default function NovoCadastro() {
               <div className="form-grid">
                 <div className="form-group">
                     <label className="form-label">CNPJ</label>
-                    <div className="document-value">{clientData.cnpj || '-'}</div>
+                    <div className="document-value" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span>{clientData.cnpj || '-'}</span>
+                        {clientData.cnpj && (
+                            <button 
+                                type="button" 
+                                onClick={handleCopyCNPJ} 
+                                style={{ 
+                                    background: 'none', 
+                                    border: 'none', 
+                                    cursor: 'pointer', 
+                                    color: cnpjCopied ? '#16a34a' : '#64748b',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem',
+                                    fontSize: '0.8rem'
+                                }}
+                                title="Copiar CNPJ (apenas números)"
+                            >
+                                {cnpjCopied ? <Check size={16} /> : <Copy size={16} />}
+                            </button>
+                        )}
+                    </div>
                 </div>
                 <div className="form-group">
                     <label className="form-label">Razão Social</label>
@@ -799,11 +852,53 @@ export default function NovoCadastro() {
 
                 <div className="form-group">
                     <label className="form-label">E-mail 1</label>
-                    <div className="document-value">{clientData.email1 || '-'}</div>
+                    <div className="document-value" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span>{clientData.email1 || '-'}</span>
+                        {clientData.email1 && (
+                            <button 
+                                type="button" 
+                                onClick={() => handleCopyText(clientData.email1, setEmail1Copied)} 
+                                style={{ 
+                                    background: 'none', 
+                                    border: 'none', 
+                                    cursor: 'pointer', 
+                                    color: email1Copied ? '#16a34a' : '#64748b',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem',
+                                    fontSize: '0.8rem'
+                                }}
+                                title="Copiar E-mail"
+                            >
+                                {email1Copied ? <Check size={16} /> : <Copy size={16} />}
+                            </button>
+                        )}
+                    </div>
                 </div>
                 <div className="form-group">
                     <label className="form-label">E-mail 2</label>
-                    <div className="document-value">{clientData.email2 || '-'}</div>
+                    <div className="document-value" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span>{clientData.email2 || '-'}</span>
+                        {clientData.email2 && (
+                            <button 
+                                type="button" 
+                                onClick={() => handleCopyText(clientData.email2, setEmail2Copied)} 
+                                style={{ 
+                                    background: 'none', 
+                                    border: 'none', 
+                                    cursor: 'pointer', 
+                                    color: email2Copied ? '#16a34a' : '#64748b',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem',
+                                    fontSize: '0.8rem'
+                                }}
+                                title="Copiar E-mail"
+                            >
+                                {email2Copied ? <Check size={16} /> : <Copy size={16} />}
+                            </button>
+                        )}
+                    </div>
                 </div>
                 <div className="form-group">
                     <label className="form-label">Contato 1</label>
@@ -935,27 +1030,44 @@ export default function NovoCadastro() {
       
       {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
         onConfirm={handleDeleteConfirm}
-        expectedValue={clientData.cnpj} // Enforce formatted CNPJ match
-        title="Confirmar Exclusão"
+        expectedValue={deleteTarget?.type === 'EQUIPMENT' 
+            ? (deleteTarget.data.modelo || 'CONFIRMAR') 
+            : clientData.cnpj} 
+        title={deleteTarget?.type === 'EQUIPMENT' ? "Remover Equipamento" : "Confirmar Exclusão"}
         description={
-            <>
-                <p style={{ marginBottom: '1rem', color: '#dc2626', fontWeight: '500' }}>
-                    ⚠️ Esta ação é permanente e não pode ser desfeita!
-                </p>
-                <p style={{ marginBottom: '1rem' }}>
-                    Para confirmar a exclusão do cliente, digite o CNPJ abaixo:
-                </p>
-                <p style={{ marginBottom: '1rem', fontWeight: '600', fontSize: '1.1rem' }}>
-                    {clientData.cnpj}
-                </p>
-            </>
+            deleteTarget?.type === 'EQUIPMENT' ? (
+                <>
+                    <p style={{ marginBottom: '1rem' }}>
+                        Tem certeza que deseja remover este equipamento da lista?
+                    </p>
+                    <p style={{ marginBottom: '1rem', fontWeight: 'bold' }}>
+                        {deleteTarget.data.equipamento} - {deleteTarget.data.modelo || '(Sem modelo)'}
+                    </p>
+                </>
+            ) : (
+                <>
+                    <p style={{ marginBottom: '1rem', color: '#dc2626', fontWeight: '500' }}>
+                        ⚠️ Esta ação é permanente e não pode ser desfeita!
+                    </p>
+                    <p style={{ marginBottom: '1rem' }}>
+                        Para confirmar a exclusão do cliente, digite o CNPJ abaixo:
+                    </p>
+                    <p style={{ marginBottom: '1rem', fontWeight: '600', fontSize: '1.1rem' }}>
+                        {clientData.cnpj}
+                    </p>
+                </>
+            )
         }
-        instructionLabel={null} // Included in description above
-        inputPlaceholder="Digite o CNPJ para confirmar"
-        confirmButtonText="Excluir Cliente"
+        instructionLabel={
+            deleteTarget?.type === 'EQUIPMENT' 
+            ? <span>Para confirmar, digite <strong>{deleteTarget.data.modelo || 'CONFIRMAR'}</strong> abaixo:</span>
+            : null
+        } 
+        inputPlaceholder={""}
+        confirmButtonText={deleteTarget?.type === 'EQUIPMENT' ? "Remover Equipamento" : "Excluir Cliente"}
       />
     </div>
   );

@@ -311,7 +311,7 @@ const Equipamentos = () => {
                 instructionLabel={
                     <span>Para confirmar a exclusão, digite <strong>{itemToDelete?.name}</strong> abaixo:</span>
                 }
-                inputPlaceholder={`Digite ${itemToDelete?.name}`}
+                inputPlaceholder={``}
                 confirmButtonText={itemToDelete?.type === 'TYPE' ? "Excluir Tipo" : "Excluir Modelo"}
             />
         </div>
