@@ -83,6 +83,33 @@ const Login = () => {
     }
   };
 
+  // Forgot Password State
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotStatus, setForgotStatus] = useState({ loading: false, message: '', error: '' });
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setForgotStatus({ loading: true, message: '', error: '' });
+    
+    try {
+        await new Promise(resolve => setTimeout(resolve, 800)); // Slight delay for UX
+        const response = await fetch('http://localhost:5000/api/auth/forgot-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: forgotEmail })
+        });
+        
+        const data = await response.json();
+        setForgotStatus({ loading: false, message: data.message, error: '' });
+        
+        // Hide modal after 3 seconds
+        setTimeout(() => setShowForgotModal(false), 3000);
+    } catch (error) {
+        setForgotStatus({ loading: false, message: '', error: 'Erro ao enviar solicitação.' });
+    }
+  };
+
   return (
     <div className="login-container">
       <div className="login-card">
@@ -105,48 +132,111 @@ const Login = () => {
             </div>
         )}
 
-        <form onSubmit={handleSubmit} className="login-form">
-          <div className="form-group">
-            <label className="form-label" htmlFor="username">Usuário ou E-mail</label>
-            <div className="input-wrapper">
-              <User size={18} className="field-icon" />
-              <input
-                id="username"
-                type="text"
-                className="form-input"
-                placeholder="Digite seu usuário ou e-mail"
-                value={usernameOrEmail}
-                onChange={handleUsernameChange}
-                required
-              />
-            </div>
-          </div>
-          <div className="form-group">
-            <label className="form-label" htmlFor="password">Senha</label>
-            <div className="input-wrapper">
-              <Lock size={18} className="field-icon" />
-              <input
-                id="password"
-                type="password"
-                className="form-input"
-                placeholder="Digite sua senha"
-                value={password}
-                onChange={handlePasswordChange}
-                required
-              />
-            </div>
-          </div>
-          <button type="submit" className="login-button" disabled={loading}>
-            {loading ? (
-                'Entrando...'
-            ) : (
-                <>
-                    <LogIn size={18} />
-                    Entrar
-                </>
-            )}
-          </button>
-        </form>
+        {/* LOGIN FORM */}
+        {!showForgotModal ? (
+            <form onSubmit={handleSubmit} className="login-form">
+              <div className="form-group">
+                <label className="form-label" htmlFor="username">Usuário ou E-mail</label>
+                <div className="input-wrapper">
+                  <User size={18} className="field-icon" />
+                  <input
+                    id="username"
+                    type="text"
+                    className="form-input"
+                    placeholder="Digite seu usuário ou e-mail"
+                    value={usernameOrEmail}
+                    onChange={handleUsernameChange}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label" htmlFor="password">Senha</label>
+                <div className="input-wrapper">
+                  <Lock size={18} className="field-icon" />
+                  <input
+                    id="password"
+                    type="password"
+                    className="form-input"
+                    placeholder="Digite sua senha"
+                    value={password}
+                    onChange={handlePasswordChange}
+                    required
+                  />
+                </div>
+                <div style={{ textAlign: 'right', marginTop: '8px' }}>
+                    <button 
+                        type="button" 
+                        className="text-btn" 
+                        onClick={() => setShowForgotModal(true)}
+                        style={{ background: 'none', border: 'none', color: '#0ea5e9', cursor: 'pointer', fontSize: '0.9rem' }}
+                    >
+                        Esqueci minha senha
+                    </button>
+                </div>
+              </div>
+              <button type="submit" className="login-button" disabled={loading}>
+                {loading ? (
+                    'Entrando...'
+                ) : (
+                    <>
+                        <LogIn size={18} />
+                        Entrar
+                    </>
+                )}
+              </button>
+            </form>
+        ) : (
+            /* FORGOT PASSWORD FORM */
+            <form onSubmit={handleForgotPassword} className="login-form">
+                <h3 style={{ textAlign: 'center', marginBottom: '1rem', color: '#334155' }}>Recuperar Senha</h3>
+                <p style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '1.5rem', textAlign: 'center' }}>
+                    Informe seu e-mail para receber o link de redefinição.
+                </p>
+
+                {forgotStatus.message && (
+                    <div className="alert alert-success" style={{ padding: '10px', marginBottom: '15px', borderRadius: '4px', backgroundColor: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0' }}>
+                        {forgotStatus.message}
+                    </div>
+                )}
+                {forgotStatus.error && (
+                    <div className="error-message">
+                        <AlertCircle size={18} />
+                        <span>{forgotStatus.error}</span>
+                    </div>
+                )}
+
+                <div className="form-group">
+                    <label className="form-label">E-mail Cadastrado</label>
+                    <div className="input-wrapper">
+                        <User size={18} className="field-icon" />
+                        <input
+                            type="email"
+                            className="form-input"
+                            placeholder="seu@email.com"
+                            value={forgotEmail}
+                            onChange={(e) => setForgotEmail(e.target.value)}
+                            required
+                        />
+                    </div>
+                </div>
+
+                <div className="form-actions" style={{ display: 'flex', gap: '10px', marginTop: '1rem' }}>
+                    <button 
+                        type="button" 
+                        className="login-button" 
+                        onClick={() => { setShowForgotModal(false); setForgotStatus({ message: '', error: '', loading: false }); setForgotEmail(''); }}
+                        style={{ backgroundColor: '#94a3b8' }}
+                    >
+                        Voltar
+                    </button>
+                    <button type="submit" className="login-button" disabled={forgotStatus.loading}>
+                        {forgotStatus.loading ? 'Enviando...' : 'Enviar Link'}
+                    </button>
+                </div>
+            </form>
+        )}
+
       </div>
         <LoadingModal isOpen={loading} minDuration={50} message="Acessando o sistema..." />
     </div>

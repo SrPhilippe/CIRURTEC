@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import Home from './pages/Home';
 import Login from './pages/Login';
+import RedefinirSenha from './pages/RedefinirSenha';
 import RegisterUser from './pages/RegisterUser';
 import TravelEmail from './pages/EmailViagem';
 import MainLayout from './layouts/MainLayout';
@@ -13,6 +14,7 @@ import Perfil from './pages/Perfil'; // Added
 import Users from './pages/Users';
 import EditUser from './pages/EditUser';
 import Equipamentos from './pages/Configuracoes/Equipamentos'; // Added
+import EmailGarantia from './pages/Configuracoes/EmailGarantia'; // Added
 
 function App() {
   return (
@@ -20,6 +22,7 @@ function App() {
       <Router basename="/CIRURTEC">
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/redefinir-senha" element={<RedefinirSenha />} />
           
           {/* Protected Routes */}
           <Route element={<ProtectedRoute />}>
@@ -32,6 +35,7 @@ function App() {
                <Route path="/clientes/:id" element={<NovoCadastro />} />
                <Route path="/perfil" element={<Perfil />} /> {/* Profile Route */}
                <Route path="/configuracoes/equipamentos" element={<Equipamentos />} /> {/* Equipment Settings */}
+               <Route path="/configuracoes/email-garantia" element={<EmailGarantia />} /> {/* Warranty Email Settings */}
              </Route>
           </Route>
 

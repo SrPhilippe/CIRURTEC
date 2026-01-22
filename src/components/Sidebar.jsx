@@ -17,7 +17,8 @@ import {
   Plus,
   ChevronDown,
   LogOut,
-  UserPlus
+  UserPlus,
+  Mail
 } from 'lucide-react';
 import logo from '../assets/images/logo-cirurtec.png';
 import './Sidebar.css';
@@ -88,7 +89,8 @@ const Sidebar = () => {
       icon: Settings, 
       isSubmenu: true, 
       subItems: [
-        { title: 'Equipamentos', icon: List, route: '/configuracoes/equipamentos' }
+        { title: 'Equipamentos', icon: List, route: '/configuracoes/equipamentos' },
+        { title: 'E-mail Garantia', icon: Mail, route: '/configuracoes/email-garantia' }
       ]
     },
     { title: 'Ajuda', icon: HelpCircle, route: '/help', disabled: true },

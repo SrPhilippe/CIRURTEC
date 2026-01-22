@@ -3,7 +3,9 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import authRoutes from './routes/auth.js'
 import clientsRoutes from './routes/clients.js'
-import equipmentSettingsRoutes from './routes/equipmentSettings.js' // Added
+import equipmentSettingsRoutes from './routes/equipmentSettings.js'
+import cron from 'node-cron'
+import { checkAndSendNotifications } from './services/notificationService.js'
 
 dotenv.config()
 
@@ -25,4 +27,9 @@ app.get('/', (req, res) => {
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`)
+
+    // Schedule notification check every day at 08:00
+    cron.schedule('0 */6 * * *', () => {
+        checkAndSendNotifications()
+    })
 })

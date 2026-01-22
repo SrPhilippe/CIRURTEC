@@ -4,6 +4,8 @@ import jwt from 'jsonwebtoken'
 import pool from '../db.js'
 import { verifyToken, verifyAdmin } from '../middleware/auth.js'
 import { nanoid } from 'nanoid'
+import { sendEmail } from '../services/emailService.js'
+import { resetPasswordTemplate } from '../templates/emailTemplates.js'
 
 const router = express.Router()
 
@@ -71,6 +73,93 @@ router.post('/login', async (req, res) => {
     }
 })
 
+// Forgot Password
+router.post('/forgot-password', async (req, res) => {
+    const { email } = req.body
+
+    if (!email) {
+        return res.status(400).json({ message: 'Email required' })
+    }
+
+    try {
+        const [users] = await pool.query('SELECT * FROM users WHERE email = ?', [email])
+
+        // Security: Always return "If email exists..." message
+        if (users.length > 0) {
+            const user = users[0]
+
+            // Generate Reset Token (1 hour expiration)
+            const resetToken = jwt.sign(
+                { id: user.id, type: 'reset' },
+                process.env.JWT_SECRET,
+                { expiresIn: '1h' }
+            )
+
+            // In a real production environment, link would be formatted:
+            // const link = `${process.env.CLIENT_URL}/reset-password?token=${resetToken}`
+            // But for now we just need to send the email.
+            // Assuming localhost for link for now or better yet, just the token logic.
+            // User didn't ask for the RESET PAGE yet, just the EMAIL sending logic.
+            // I'll create a link to a hypothetical /redefinir-senha route
+            const resetLink = `http://localhost:5173/redefinir-senha?token=${resetToken}`
+
+            const html = resetPasswordTemplate(resetLink, user.username)
+
+            // DEV OVERRIDE: Send to philippecoding@gmail.com
+            // In PROD: to = user.email
+            const to = 'philippecoding@gmail.com'
+
+            console.log(`Sending Reset Password email for ${user.email} to ${to}`)
+            await sendEmail(to, 'Redefinição de Senha - CIRURTEC', html)
+        } else {
+            console.log(`Reset Password requested for non-existent email: ${email}`)
+        }
+
+        res.json({ message: 'Se o e-mail estiver cadastrado, você receberá um link para redefinição de senha.' })
+
+    } catch (error) {
+        console.error('Forgot Password Error:', error)
+        res.status(500).json({ message: 'Erro ao processar solicitação' })
+    }
+})
+
+// Reset Password
+router.post('/reset-password', async (req, res) => {
+    const { token, newPassword } = req.body
+
+    if (!token || !newPassword) {
+        return res.status(400).json({ message: 'Token e nova senha são obrigatórios' })
+    }
+
+    try {
+        // Verify Token
+        const decoded = jwt.verify(token, process.env.JWT_SECRET)
+
+        if (decoded.type !== 'reset') {
+            return res.status(400).json({ message: 'Token inválido' })
+        }
+
+        const userId = decoded.id
+
+        // Update Password
+        const hashedPassword = bcrypt.hashSync(newPassword, 8)
+
+        await pool.query(
+            'UPDATE users SET password = ? WHERE id = ?',
+            [hashedPassword, userId]
+        )
+
+        res.json({ message: 'Senha redefinida com sucesso!' })
+
+    } catch (error) {
+        console.error('Reset Password Error:', error)
+        if (error.name === 'TokenExpiredError') {
+            return res.status(400).json({ message: 'O link de redefinição expirou. Solicite um novo.' })
+        }
+        res.status(400).json({ message: 'Link inválido ou expirado' })
+    }
+})
+
 // Register (Protected)
 router.post('/register', [verifyToken, verifyAdmin], async (req, res) => {
     const { username, email, password, role, rights } = req.body
@@ -123,7 +212,7 @@ router.get('/me', verifyToken, async (req, res) => {
 // Get All Users (Admin Only)
 router.get('/users', [verifyToken, verifyAdmin], async (req, res) => {
     try {
-        const [users] = await pool.query('SELECT id, public_ID, username, email, role, rights, created_at FROM users')
+        const [users] = await pool.query('SELECT id, public_ID, username, email, role, rights, created_at, receive_warranty_emails FROM users')
         res.json(users)
     } catch (error) {
         console.error(error)
@@ -149,10 +238,6 @@ router.put('/users/:idOrPublicId', verifyToken, async (req, res) => {
         let userId = idOrPublicId
 
         // Resolve public_ID to ID if necessary
-        // Check if it's numeric (ID) or string (public_ID)
-        // Simple check: if it contains non-digits, it's public_ID (except typical public_ID doesn't look like number anyway)
-        // NanoID is 21 chars, ID is int.
-
         if (isNaN(idOrPublicId)) {
             const [users] = await pool.query('SELECT id FROM users WHERE public_ID = ?', [idOrPublicId])
             if (users.length === 0) return res.status(404).json({ message: 'Usuário não encontrado' })
@@ -211,7 +296,23 @@ router.put('/users/:idOrPublicId', verifyToken, async (req, res) => {
     }
 })
 
-// Delete User (Admin Only)
+// Update Warranty Email Settings (Admin Only)
+router.put('/users/:id/warranty-settings', [verifyToken, verifyAdmin], async (req, res) => {
+    const { id } = req.params
+    const { receive_warranty_emails } = req.body
+
+    try {
+        await pool.query(
+            'UPDATE users SET receive_warranty_emails = ? WHERE id = ?',
+            [receive_warranty_emails, id]
+        )
+        res.json({ message: 'Configuração atualizada com sucesso' })
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ message: 'Erro ao atualizar configuração' })
+    }
+})
+
 // Delete User (Admin Only)
 router.delete('/users/:idOrPublicId', [verifyToken, verifyAdmin], async (req, res) => {
     const { idOrPublicId } = req.params
@@ -221,7 +322,6 @@ router.delete('/users/:idOrPublicId', [verifyToken, verifyAdmin], async (req, re
 
         if (isNaN(idOrPublicId)) {
             const [users] = await pool.query('SELECT id FROM users WHERE public_ID = ?', [idOrPublicId])
-            // If not found, try proceeding as if it might fail later, or return 404 here
             if (users.length === 0) return res.status(404).json({ message: 'Usuário não encontrado' })
             userId = users[0].id
         } else {

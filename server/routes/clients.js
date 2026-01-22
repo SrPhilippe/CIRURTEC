@@ -202,6 +202,22 @@ router.get('/:id', verifyToken, async (req, res) => {
 
         const [equipments] = await pool.query('SELECT * FROM equipments WHERE client_id = ?', [id])
 
+        // Fetch sent notifications for these equipments
+        if (equipments.length > 0) {
+            const equipmentIds = equipments.map(e => e.id)
+            const [notifications] = await pool.query(
+                'SELECT equipment_id, interval_months FROM sent_notifications WHERE equipment_id IN (?) AND status = "SUCCESS"',
+                [equipmentIds]
+            )
+
+            // Attach notifications to equipments
+            equipments.forEach(eq => {
+                eq.sentNotifications = notifications
+                    .filter(n => n.equipment_id === eq.id)
+                    .map(n => n.interval_months)
+            })
+        }
+
         res.json({
             client: clients[0],
             equipments

@@ -42,6 +42,13 @@ CREATE TABLE IF NOT EXISTS equipments (
     INDEX idx_numero_serie (numero_serie)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Insert default admin user (Password: admin123)
--- You should change this password immediately after first login!
--- This is just a placeholder, the actual insertion will be handled by the application or manual script with hashed password.
+-- Create Sent Notifications Table (to track warranty emails)
+CREATE TABLE IF NOT EXISTS sent_notifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    equipment_id VARCHAR(36),
+    interval_months INT, -- 3, 6, 9, 12
+    sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status ENUM('SUCCESS', 'FAILED') DEFAULT 'SUCCESS',
+    FOREIGN KEY (equipment_id) REFERENCES equipments(id) ON DELETE CASCADE,
+    UNIQUE KEY (equipment_id, interval_months)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

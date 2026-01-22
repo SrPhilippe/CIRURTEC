@@ -4,6 +4,7 @@ export const verifyToken = (req, res, next) => {
     const token = req.headers['authorization']?.split(' ')[1]
 
     if (!token) {
+        console.warn('Authentication failed: No token provided')
         return res.status(403).json({ message: 'No token provided' })
     }
 
@@ -12,6 +13,7 @@ export const verifyToken = (req, res, next) => {
         req.user = decoded
         next()
     } catch (err) {
+        console.error('Authentication failed: Invalid or expired token', err.message)
         return res.status(401).json({ message: 'Unauthorized' })
     }
 }

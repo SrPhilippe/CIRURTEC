@@ -150,7 +150,6 @@ export default function NovoCadastro() {
         email1: client.email1,
         email2: client.email2 || '',
         contato1: client.contato1,
-        contato1: client.contato1,
         contato2: client.contato2 || ''
       });
 
@@ -161,7 +160,8 @@ export default function NovoCadastro() {
             modelo: eq.modelo,
             numeroSerie: eq.numero_serie, // Map from snake_case
             dataNota: (eq.data_nota && !isNaN(new Date(eq.data_nota).getTime())) ? new Date(eq.data_nota).toISOString().split('T')[0] : '',
-            tipoInstalacao: eq.tipo_instalacao || 'BAUMER'
+            tipoInstalacao: eq.tipo_instalacao || 'BAUMER',
+            sentNotifications: eq.sentNotifications || []
         })));
       }
     } catch (error) {
@@ -526,7 +526,6 @@ export default function NovoCadastro() {
             nomeFantasia: '',
             email1: '',
             email2: '',
-            contato1: '',
             contato1: '',
             contato2: ''
         });
@@ -983,10 +982,30 @@ export default function NovoCadastro() {
                                       <tbody>
                                         <tr>
                                           <td>{eq.dataNota ? eq.dataNota.split('-').reverse().join('/') : '-'}</td>
-                                          <td>{maintenanceDates.threeMonths}</td>
-                                          <td>{maintenanceDates.sixMonths}</td>
-                                          <td>{maintenanceDates.nineMonths}</td>
-                                          <td>{maintenanceDates.twelveMonths}</td>
+                                          <td>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                                              {maintenanceDates.threeMonths}
+                                              {eq.sentNotifications?.includes(3) && <Check size={16} color="#0ea5e9" strokeWidth={3} title="E-mail enviado" />}
+                                            </div>
+                                          </td>
+                                          <td>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                                              {maintenanceDates.sixMonths}
+                                              {eq.sentNotifications?.includes(6) && <Check size={16} color="#0ea5e9" strokeWidth={3} title="E-mail enviado" />}
+                                            </div>
+                                          </td>
+                                          <td>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                                              {maintenanceDates.nineMonths}
+                                              {eq.sentNotifications?.includes(9) && <Check size={16} color="#0ea5e9" strokeWidth={3} title="E-mail enviado" />}
+                                            </div>
+                                          </td>
+                                          <td>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                                              {maintenanceDates.twelveMonths}
+                                              {eq.sentNotifications?.includes(12) && <Check size={16} color="#0ea5e9" strokeWidth={3} title="E-mail enviado" />}
+                                            </div>
+                                          </td>
                                         </tr>
                                       </tbody>
                                     </table>
