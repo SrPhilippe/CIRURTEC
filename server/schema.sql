@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
     role VARCHAR(50) DEFAULT 'Padrão',
     rights ENUM('ADMIN', 'Master', 'Padrão') DEFAULT 'Padrão',
     public_ID VARCHAR(21) UNIQUE,
+    receive_warranty_emails TINYINT(1) DEFAULT '0',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -40,6 +41,22 @@ CREATE TABLE IF NOT EXISTS equipments (
     FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
     INDEX idx_client_id (client_id),
     INDEX idx_numero_serie (numero_serie)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- Create Equipment Types Table
+CREATE TABLE IF NOT EXISTS equipment_types (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Create Equipment Models Table
+CREATE TABLE IF NOT EXISTS equipment_models (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    type_id INT NOT NULL,
+    FOREIGN KEY (type_id) REFERENCES equipment_types(id) ON DELETE CASCADE,
+    UNIQUE KEY idx_type_name (type_id, name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Create Sent Notifications Table (to track warranty emails)

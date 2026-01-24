@@ -149,36 +149,38 @@ const resolveClientId = async (param) => {
 }
 
 // Get all clients with their equipment (for filtering)
+// Get all clients with their equipment (for filtering)
 router.get('/', verifyToken, async (req, res) => {
     try {
-        const query = `
-            SELECT 
-                c.*, 
-                JSON_ARRAYAGG(
-                    JSON_OBJECT(
-                        'id', e.id,
-                        'equipamento', e.equipamento, 
-                        'modelo', e.modelo, 
-                        'numero_serie', e.numero_serie,
-                        'tipo_instalacao', e.tipo_instalacao
-                    )
-                ) as equipments_json 
-            FROM clients c 
-            LEFT JOIN equipments e ON c.id = e.client_id 
-            GROUP BY c.id 
-            ORDER BY c.created_at DESC
-        `
-        const [clients] = await pool.query(query)
+        // Step 1: Fetch all clients
+        const [clients] = await pool.query('SELECT * FROM clients ORDER BY created_at DESC')
 
-        // Parse JSON if the driver doesn't do it automatically (sometimes it comes as string)
-        const parsedClients = clients.map(client => ({
+        if (clients.length === 0) {
+            return res.json([])
+        }
+
+        // Step 2: Fetch all equipments for these clients
+        const clientIds = clients.map(client => client.id)
+
+        let equipments = []
+        if (clientIds.length > 0) {
+            const placeholders = clientIds.map(() => '?').join(',')
+            const [rows] = await pool.query(
+                `SELECT id, client_id, equipamento, modelo, numero_serie, tipo_instalacao 
+                 FROM equipments 
+                 WHERE client_id IN (${placeholders})`,
+                clientIds
+            )
+            equipments = rows
+        }
+
+        // Step 3: Map equipments to clients
+        const clientsWithEquipments = clients.map(client => ({
             ...client,
-            equipments: typeof client.equipments_json === 'string'
-                ? JSON.parse(client.equipments_json)
-                : (client.equipments_json || [])
+            equipments: equipments.filter(eq => eq.client_id === client.id)
         }))
 
-        res.json(parsedClients)
+        res.json(clientsWithEquipments)
     } catch (error) {
         console.error('Error fetching clients:', error)
         res.status(500).json({ message: 'Erro ao buscar clientes' })

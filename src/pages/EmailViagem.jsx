@@ -38,6 +38,23 @@ export default function TravelEmail() {
   const [activeCityField, setActiveCityField] = useState(null); // { groupIndex, destIndex }
   const wrapperRef = useRef(null); // To detect clicks outside
 
+  // --- AUTO-FOCUS NEW TASKS STATE ---
+  const taskInputRefs = useRef({});
+  const [focusTarget, setFocusTarget] = useState(null); // { groupIndex, destIndex, taskIndex }
+
+  // Auto-focus effect
+  useEffect(() => {
+    if (focusTarget) {
+        const { groupIndex, destIndex, taskIndex } = focusTarget;
+        const key = `${groupIndex}-${destIndex}-${taskIndex}`;
+        const el = taskInputRefs.current[key];
+        if (el) {
+            el.focus();
+            setFocusTarget(null);
+        }
+    }
+  }, [tripGroups, focusTarget]);
+
   // --- FETCH CITIES FROM IBGE (ON MOUNT) ---
   useEffect(() => {
     fetchCities()
@@ -763,6 +780,17 @@ export default function TravelEmail() {
                                                 onChange={(e) => updateTask(groupIndex, destIndex, i, e.target.value)}
                                                 placeholder="Ex: Santa Casa - Entrega de material"
                                                 className="input-field"
+                                                ref={(el) => (taskInputRefs.current[`${groupIndex}-${destIndex}-${i}`] = el)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        e.preventDefault();
+                                                        // Capture the index BEFORE adding (which might mutate state in place)
+                                                        // The new item will be at the current length position.
+                                                        const nextIndex = dest.tasks.length;
+                                                        addTask(groupIndex, destIndex);
+                                                        setFocusTarget({ groupIndex, destIndex, taskIndex: nextIndex });
+                                                    }
+                                                }}
                                             />
                                             {dest.tasks.length > 1 && (
                                                 <button onClick={() => removeTask(groupIndex, destIndex, i)} className="btn-icon-only">
@@ -958,7 +986,7 @@ export default function TravelEmail() {
             className="btn-float-clear"
             title="Limpar e Reiniciar"
         >
-            <RotateCcw size={24} />
+            <Trash2 size={24} />
         </button>
         <button 
             onClick={saveDraft}
