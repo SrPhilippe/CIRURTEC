@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
-  Home, 
+  Home,
+  User,
   ChevronLeft, 
   ChevronRight, 
-  Plane, 
+  Car, 
   Users, 
   Settings, 
   FileText, 
@@ -14,47 +15,54 @@ import {
   Building2,
   List,
   Plus,
-  ChevronDown
+  ChevronDown,
+  LogOut,
+  UserPlus,
+  Mail
 } from 'lucide-react';
+import logo from '../assets/images/logo-cirurtec.png';
 import './Sidebar.css';
 
+import { useContext } from 'react';
+import { AuthContext } from '../context/AuthContext';
+import { checkPermission, PERMISSIONS } from '../utils/permissions';
+
+
 const Sidebar = () => {
+  const { user, logout } = useContext(AuthContext); // Get user and logout
   const location = useLocation();
   
-  // Initialize state from localStorage or default to false (expanded)
+  // ... (state logic remains same)
   const [isCollapsed, setIsCollapsed] = useState(() => {
     const savedState = localStorage.getItem('sidebarCollapsed');
     return savedState === 'true';
   });
 
-  // State for expanded submenus
   const [expandedMenus, setExpandedMenus] = useState({});
 
-  // Save state to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('sidebarCollapsed', isCollapsed);
   }, [isCollapsed]);
 
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);
-    // When collapsing sidebar, we might want to collapse submenus too, or keep them open?
-    // Let's keep them as is for now, but CSS will hide text.
   };
 
   const toggleSubmenu = (title) => {
     if (isCollapsed) {
-      setIsCollapsed(false); // Auto expand sidebar if clicking a submenu trigger while collapsed
+      setIsCollapsed(false);
       setTimeout(() => {
-        setExpandedMenus(prev => ({ ...prev, [title]: !prev[title] }));
+        setExpandedMenus(prev => ({ [title]: !prev[title] }));
       }, 50);
     } else {
-      setExpandedMenus(prev => ({ ...prev, [title]: !prev[title] }));
+      setExpandedMenus(prev => ({ [title]: !prev[title] }));
     }
   };
 
   const menuItems = [
+    { title: user?.username || 'Perfil', icon: User, route: '/perfil' },
     { title: 'Início', icon: Home, route: '/', exact: true },
-    { title: 'E-mail de Viagens', icon: Plane, route: '/email-viagem' },
+    { title: 'Viagens', icon: Car, route: '/email-viagem' },
     { 
       title: 'Clientes', 
       icon: Building2, 
@@ -64,17 +72,34 @@ const Sidebar = () => {
         { title: 'Novo Cadastro', icon: Plus, route: '/clientes/novo' },
       ]
     },
-    { title: 'Usuários', icon: Users, route: '/users', disabled: true },
-    { title: 'Configurações', icon: Settings, route: '/settings', disabled: true },
+    { 
+      title: 'Usuários', 
+      icon: Users, 
+      isSubmenu: true,
+      hidden: !checkPermission(user, PERMISSIONS.MANAGE_USERS),
+      subItems: [
+        { title: 'Lista de Usuários', icon: List, route: '/users' },
+        { title: 'Cadastrar Usuário', icon: UserPlus, route: '/admin/register' },
+      ]
+    }, 
     { title: 'Relatórios', icon: FileText, route: '/reports', disabled: true },
     { title: 'Dashboard', icon: BarChart, route: '/dashboard', disabled: true },
+    { 
+      title: 'Configurações', 
+      icon: Settings, 
+      isSubmenu: true, 
+      subItems: [
+        { title: 'Equipamentos', icon: List, route: '/configuracoes/equipamentos' },
+        { title: 'E-mail Garantia', icon: Mail, route: '/configuracoes/email-garantia' }
+      ]
+    },
     { title: 'Ajuda', icon: HelpCircle, route: '/help', disabled: true },
   ];
 
   return (
     <aside className={`sidebar ${isCollapsed ? 'collapsed' : 'expanded'}`}>
       <div className="sidebar-header">
-        {!isCollapsed && <span className="sidebar-title">Menu</span>}
+        {!isCollapsed && <img src={logo} alt="CIRURTEC" className="sidebar-logo" style={{ maxWidth: '120px', height: 'auto' }} />}
         <button 
           className="sidebar-toggle" 
           onClick={toggleSidebar}
@@ -86,9 +111,10 @@ const Sidebar = () => {
 
       <nav className="sidebar-nav">
         {menuItems.map((item, index) => {
+          if (item.hidden) return null;
+
           if (item.isSubmenu) {
             const isExpanded = expandedMenus[item.title];
-            // Check if any child is active
             const isChildActive = item.subItems.some(sub => location.pathname === sub.route);
             
             return (
@@ -110,7 +136,6 @@ const Sidebar = () => {
                   )}
                 </div>
                 
-                {/* Submmenu Items */}
                 <div className={`sidebar-submenu ${isExpanded ? 'open' : ''}`}>
                   {item.subItems.map((subItem, subIndex) => (
                     <NavLink
@@ -146,6 +171,13 @@ const Sidebar = () => {
           );
         })}
       </nav>
+
+      <div className="sidebar-footer">
+        <button className="sidebar-item logout-btn" onClick={logout} title={isCollapsed ? "Sair" : ""}>
+          <LogOut size={20} className="sidebar-icon" />
+          {!isCollapsed && <span className="sidebar-text">Sair</span>}
+        </button>
+      </div>
     </aside>
   );
 };

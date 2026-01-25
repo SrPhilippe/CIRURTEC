@@ -177,3 +177,40 @@
        Hiding for now as per plan. 
     */
 }
+
+/* Sidebar Footer */
+.sidebar-footer {
+    margin-top: auto;
+    /* Push to bottom */
+    padding-top: 1rem;
+    border-top: 1px solid #1e293b;
+}
+
+.logout-btn {
+    width: 100%;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    transition: all 0.2s;
+    font-family: inherit;
+    font-size: 0.95rem;
+    text-align: left;
+}
+
+.logout-btn:hover {
+    background: rgba(239, 68, 68, 0.1);
+    /* Red tint on hover */
+    color: #ef4444;
+    /* Red text */
+}
+
+/* Ensure collapsed state handles button correctly */
+.sidebar.collapsed .logout-btn {
+    justify-content: center;
+    padding: 0.75rem;
+}
