@@ -41,7 +41,8 @@ jobs:
         # --- THIS IS THE IMPORTANT PART FOR VARIABLES ---
         env:
           # --- CONFIGURAÇÃO DA API GEMINI ---
-          GEMINI_API_KEY: ${{ vars.GEMINI_API_KEY }}
+          # Note: Vite requires variables to start with VITE_ to be exposed to the client
+          VITE_GEMINI_API_KEY: ${{ vars.GEMINI_API_KEY }}
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

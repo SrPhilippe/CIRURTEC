@@ -11,7 +11,7 @@ import { fetchCities } from '../services/ibgeService';
 import { analyzeTripText, generateSubject } from '../services/geminiService';
 
 // --- CONFIGURAÇÃO DA API GEMINI ---
-const apiKey = import.meta.env.GEMINI_API_KEY || ""; // A chave será injetada automaticamente pelo ambiente
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY || ""; // A chave será injetada automaticamente pelo ambiente
 
 export default function TravelEmail() {
   // --- ESTADO PRINCIPAL: GRUPOS DE VIAGEM ---
