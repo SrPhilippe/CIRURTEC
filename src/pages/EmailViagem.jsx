@@ -35,7 +35,7 @@ export default function TravelEmail() {
   // --- CITY AUTOCOMPLETE STATE ---
   const allCitiesRef = useRef([]); // Stores all fetched cities
   const [citySearchResults, setCitySearchResults] = useState([]); // Stores filtered cities
-  const [activeCityField, setActiveCityField] = useState(null); // { groupIndex, destIndex }
+  const [activeCityField, setActiveCityField] = useState(null); // { groupIndex, destIndex, field: 'city' | 'origin' }
   const wrapperRef = useRef(null); // To detect clicks outside
 
   // --- AUTO-FOCUS NEW TASKS STATE ---
@@ -74,10 +74,10 @@ export default function TravelEmail() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleCityChange = (groupIndex, destIndex, value) => {
+  const handleCityChange = (groupIndex, destIndex, value, field = 'city') => {
     // 1. Update the value (Uppercase)
     const upperValue = value.toUpperCase();
-    updateDestinationField(groupIndex, destIndex, 'city', upperValue);
+    updateDestinationField(groupIndex, destIndex, field, upperValue);
     
     // 2. Filter Cities if >= 2 chars
     if (value.length >= 2) {
@@ -96,15 +96,15 @@ export default function TravelEmail() {
         });
 
         setCitySearchResults(filtered.slice(0, 10)); // Limit to 10 results
-        setActiveCityField({ groupIndex, destIndex });
+        setActiveCityField({ groupIndex, destIndex, field });
     } else {
         setCitySearchResults([]);
         setActiveCityField(null);
     }
   };
 
-  const selectCity = (groupIndex, destIndex, city) => {
-      updateDestinationField(groupIndex, destIndex, 'city', city.nome.toUpperCase());
+  const selectCity = (groupIndex, destIndex, city, field) => {
+      updateDestinationField(groupIndex, destIndex, field, city.nome.toUpperCase());
       setActiveCityField(null);
   };
 
@@ -162,7 +162,10 @@ export default function TravelEmail() {
       visitType: 'PREVENTIVA',
       returnSameDay: false,
       tasks: [''],
-      sleepAt: ''
+      tasks: [''],
+      sleepAt: '',
+      hasOrigin: false,
+      origin: ''
     };
   }
 
@@ -682,30 +685,90 @@ export default function TravelEmail() {
                                     <div className="trip-card-body">
                                         {/* GRUPO 1: DESTINO E DATA */}
                                         <div className="grid-2-col">
+                                        <div className="col-span-2 mb-2">
+                                            {/* ORIGIN TOGGLE BUTTON */}
+                                            {!dest.hasOrigin ? (
+                                                <button 
+                                                    onClick={() => updateDestinationField(groupIndex, destIndex, 'hasOrigin', true)}
+                                                    className="btn-add-tech-green"
+                                                    style={{ width: 'fit-content' }}
+                                                >
+                                                    <Plus size={14} /> Adicionar origem da viagem
+                                                </button>
+                                            ) : (
+                                                <button 
+                                                    onClick={() => {
+                                                        updateDestinationField(groupIndex, destIndex, 'hasOrigin', false);
+                                                        updateDestinationField(groupIndex, destIndex, 'origin', '');
+                                                    }}
+                                                    className="btn-remove-group"
+                                                    style={{ width: 'fit-content' }}
+                                                >
+                                                    <Trash2 size={16} /> Remover origem
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {dest.hasOrigin && (
+                                            <div className="col-span-2">
+                                                <label className="label-sm">Origem</label>
+                                                <div className="input-icon-wrapper" ref={activeCityField?.groupIndex === groupIndex && activeCityField?.destIndex === destIndex && activeCityField?.field === 'origin' ? wrapperRef : null}>
+                                                    <MapPin className="input-icon" size={16} />
+                                                    <input
+                                                        type="text"
+                                                        value={dest.origin || ''}
+                                                        onChange={(e) => handleCityChange(groupIndex, destIndex, e.target.value, 'origin')}
+                                                        onFocus={(e) => { 
+                                                            if(e.target.value.length >= 2) handleCityChange(groupIndex, destIndex, e.target.value, 'origin'); 
+                                                        }}
+                                                        placeholder="Ex: UNAÍ"
+                                                        className="input-no-border"
+                                                        autoComplete="off"
+                                                    />
+
+                                                    {/* DROPDOWN MENU FOR ORIGIN */}
+                                                    {activeCityField?.groupIndex === groupIndex && activeCityField?.destIndex === destIndex && activeCityField?.field === 'origin' && citySearchResults.length > 0 && (
+                                                        <ul className="city-dropdown">
+                                                            {citySearchResults.map((city) => (
+                                                                <li 
+                                                                    key={city.id} 
+                                                                    className="city-dropdown-item"
+                                                                    onClick={() => selectCity(groupIndex, destIndex, city, 'origin')}
+                                                                >
+                                                                    <span className="city-name">{city.nome}</span>
+                                                                    <span className="city-uf">{city.uf}</span>
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+
                                         <div className="col-span-2">
-                                            <label className="label-sm">Cidade</label>
-                                            <div className="input-icon-wrapper" ref={activeCityField?.groupIndex === groupIndex && activeCityField?.destIndex === destIndex ? wrapperRef : null}>
+                                            <label className="label-sm">{dest.hasOrigin ? 'Destino' : 'Cidade'}</label>
+                                            <div className="input-icon-wrapper" ref={activeCityField?.groupIndex === groupIndex && activeCityField?.destIndex === destIndex && activeCityField?.field === 'city' ? wrapperRef : null}>
                                             <MapPin className="input-icon" size={16} />
                                             <input
                                                 type="text"
                                                 value={dest.city}
-                                                onChange={(e) => handleCityChange(groupIndex, destIndex, e.target.value)}
+                                                onChange={(e) => handleCityChange(groupIndex, destIndex, e.target.value, 'city')}
                                                 onFocus={(e) => { 
-                                                    if(e.target.value.length >= 2) handleCityChange(groupIndex, destIndex, e.target.value); 
+                                                    if(e.target.value.length >= 2) handleCityChange(groupIndex, destIndex, e.target.value, 'city'); 
                                                 }}
                                                 placeholder="Ex: IBERTIOGA"
                                                 className="input-no-border"
                                                 autoComplete="off"
                                             />
                                             
-                                            {/* DROPDOWN MENU */}
-                                            {activeCityField?.groupIndex === groupIndex && activeCityField?.destIndex === destIndex && citySearchResults.length > 0 && (
+                                            {/* DROPDOWN MENU FOR CITY */}
+                                            {activeCityField?.groupIndex === groupIndex && activeCityField?.destIndex === destIndex && activeCityField?.field === 'city' && citySearchResults.length > 0 && (
                                                 <ul className="city-dropdown">
                                                     {citySearchResults.map((city) => (
                                                         <li 
                                                             key={city.id} 
                                                             className="city-dropdown-item"
-                                                            onClick={() => selectCity(groupIndex, destIndex, city)}
+                                                            onClick={() => selectCity(groupIndex, destIndex, city, 'city')}
                                                         >
                                                             <span className="city-name">{city.nome}</span>
                                                             <span className="city-uf">{city.uf}</span>
@@ -943,16 +1006,37 @@ export default function TravelEmail() {
                         {/* LOOP DE DESTINOS DO GRUPO */}
                         {group.destinations.map((dest, index) => (
                             <div key={dest.id} style={{ marginBottom: '8px' }}>
-                                {/* LINHA 1: CIDADE - DATA - TIPO - PERNOITE */}
-                                <div style={{ fontSize: '14px', lineHeight: '1.5', marginBottom: '2px', wordBreak: 'break-word' }}>
-                                    <strong style={{ textTransform: 'uppercase' }}>{dest.city || 'CIDADE'}</strong>
-                                    {' - '}
-                                    {formatDateRange(dest.startDate, dest.endDate)}
-                                    {' - '}
-                                    {dest.visitType}
-                                    {' - '}
-                                    <strong>{dest.sleepAt ? `Dorme em ${dest.sleepAt}` : getDurationText(dest)}</strong>
-                                </div>
+                                {dest.hasOrigin && dest.origin ? (
+                                    <>
+                                        {/* LINHA 1: ORIGEM -> DESTINO */}
+                                        <div style={{ fontSize: '14px', lineHeight: '1.5', marginBottom: '2px', wordBreak: 'break-word' }}>
+                                            <span style={{ fontSize: '10px', color: '#666', fontWeight: 'bold' }}>ORIGEM: </span>
+                                            <strong style={{ textTransform: 'uppercase' }}>{dest.origin}</strong>
+                                            {' \u2192 '}
+                                            <span style={{ fontSize: '10px', color: '#666', fontWeight: 'bold' }}>DESTINO: </span>
+                                            <strong style={{ textTransform: 'uppercase' }}>{dest.city || 'CIDADE'}</strong>
+                                        </div>
+                                        {/* LINHA 2: DETALHES */}
+                                        <div style={{ fontSize: '14px', lineHeight: '1.5', marginBottom: '2px', wordBreak: 'break-word' }}>
+                                            {formatDateRange(dest.startDate, dest.endDate)}
+                                            {' - '}
+                                            {dest.visitType}
+                                            {' - '}
+                                            <strong>{dest.sleepAt ? `Dorme em ${dest.sleepAt}` : getDurationText(dest)}</strong>
+                                        </div>
+                                    </>
+                                ) : (
+                                    /* LINHA ÚNICA: DESTINO - DETALHES - ... */
+                                    <div style={{ fontSize: '14px', lineHeight: '1.5', marginBottom: '2px', wordBreak: 'break-word' }}>
+                                        <strong style={{ textTransform: 'uppercase' }}>{dest.city || 'CIDADE'}</strong>
+                                        {' - '}
+                                        {formatDateRange(dest.startDate, dest.endDate)}
+                                        {' - '}
+                                        {dest.visitType}
+                                        {' - '}
+                                        <strong>{dest.sleepAt ? `Dorme em ${dest.sleepAt}` : getDurationText(dest)}</strong>
+                                    </div>
+                                )}
 
                                 {/* LINHA 2+: TAREFAS */}
                                 <div style={{ fontSize: '14px', lineHeight: '1.4', marginBottom: '4px', wordBreak: 'break-word' }}>
