@@ -161,7 +161,8 @@ export default function TravelEmail() {
       endDate: '',
       visitType: 'PREVENTIVA',
       returnSameDay: false,
-      tasks: ['']
+      tasks: [''],
+      sleepAt: ''
     };
   }
 
@@ -760,11 +761,26 @@ export default function TravelEmail() {
                                             >
                                             <option value="PREVENTIVA">PREVENTIVA</option>
                                             <option value="CORRETIVA">CORRETIVA</option>
-                                            <option value="PREVENTIVA + CORRETIVA">PREVENTIVA + CORRETIVA</option>
                                             <option value="CEMIG">CEMIG</option>
-                                            <option value="INSTALAÇÃO">INSTALAÇÃO</option>
                                             <option value="VISITA TÉCNICA">VISITA TÉCNICA</option>
                                             <option value="OUTROS">OUTROS</option>
+                                            </select>
+                                        </div>
+
+                                        {/* SLEEP AT SELECTION */}
+                                        <div className="col-span-2">
+                                            <label className="label-sm">Onde vai dormir?</label>
+                                            <select
+                                                value={dest.sleepAt || ''}
+                                                onChange={(e) => updateDestinationField(groupIndex, destIndex, 'sleepAt', e.target.value)}
+                                                className="select-field"
+                                            >
+                                                <option value="">Selecione...</option>
+                                                {group.destinations.slice(destIndex).map((d) => (
+                                                    d.city ? (
+                                                        <option key={d.id} value={d.city}>{d.city}</option>
+                                                    ) : null
+                                                ))}
                                             </select>
                                         </div>
                                         </div>
@@ -784,11 +800,17 @@ export default function TravelEmail() {
                                                 onKeyDown={(e) => {
                                                     if (e.key === 'Enter') {
                                                         e.preventDefault();
-                                                        // Capture the index BEFORE adding (which might mutate state in place)
-                                                        // The new item will be at the current length position.
                                                         const nextIndex = dest.tasks.length;
                                                         addTask(groupIndex, destIndex);
                                                         setFocusTarget({ groupIndex, destIndex, taskIndex: nextIndex });
+                                                    }
+                                                    if (e.ctrlKey && e.key === 'Backspace') {
+                                                        e.preventDefault();
+                                                        if (dest.tasks.length > 1) {
+                                                            removeTask(groupIndex, destIndex, i);
+                                                            const targetIndex = i > 0 ? i - 1 : 0;
+                                                            setFocusTarget({ groupIndex, destIndex, taskIndex: targetIndex });
+                                                        }
                                                     }
                                                 }}
                                             />
@@ -929,7 +951,7 @@ export default function TravelEmail() {
                                     {' - '}
                                     {dest.visitType}
                                     {' - '}
-                                    <strong>{getDurationText(dest)}</strong>
+                                    <strong>{dest.sleepAt ? `Dorme em ${dest.sleepAt}` : getDurationText(dest)}</strong>
                                 </div>
 
                                 {/* LINHA 2+: TAREFAS */}
