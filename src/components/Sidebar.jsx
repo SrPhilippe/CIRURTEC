@@ -28,7 +28,7 @@ import { AuthContext } from '../context/AuthContext';
 import { checkPermission, PERMISSIONS } from '../utils/permissions';
 
 
-const Sidebar = () => {
+const Sidebar = ({ mobileOpen, setMobileOpen }) => {
   const { user, logout } = useContext(AuthContext); // Get user and logout
   const location = useLocation();
   
@@ -97,9 +97,17 @@ const Sidebar = () => {
   ];
 
   return (
-    <aside className={`sidebar ${isCollapsed ? 'collapsed' : 'expanded'}`}>
+    <aside className={`sidebar ${isCollapsed ? 'collapsed' : 'expanded'} ${mobileOpen ? 'mobile-open' : ''}`}>
       <div className="sidebar-header">
         {!isCollapsed && <img src={logo} alt="CIRURTEC" className="sidebar-logo" style={{ maxWidth: '120px', height: 'auto' }} />}
+        
+        {/* Close button for mobile */}
+        <button 
+          className="sidebar-toggle mobile-close-btn"
+          onClick={() => setMobileOpen(false)}
+        >
+            <ChevronLeft size={24} />
+        </button>
         <button 
           className="sidebar-toggle" 
           onClick={toggleSidebar}
