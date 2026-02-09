@@ -1017,7 +1017,7 @@ export default function TravelEmail() {
                                             <strong style={{ textTransform: 'uppercase' }}>{dest.city || 'CIDADE'}</strong>
                                         </div>
                                         {/* LINHA 2: DETALHES */}
-                                        <div style={{ fontSize: '14px', lineHeight: '1.5', marginBottom: '2px', wordBreak: 'break-word' }}>
+                                        <div style={{ fontSize: '12px', lineHeight: '1.5', marginBottom: '2px', wordBreak: 'break-word' }}>
                                             {formatDateRange(dest.startDate, dest.endDate)}
                                             {' - '}
                                             {dest.visitType}
@@ -1039,7 +1039,7 @@ export default function TravelEmail() {
                                 )}
 
                                 {/* LINHA 2+: TAREFAS */}
-                                <div style={{ fontSize: '14px', lineHeight: '1.4', marginBottom: '4px', wordBreak: 'break-word' }}>
+                                <div style={{ fontSize: '12px', lineHeight: '1.4', marginBottom: '4px', wordBreak: 'break-word' }}>
                                     {dest.tasks.filter(t => t).map((task, tIndex) => (
                                     <div key={tIndex}>- {task}</div>
                                     ))}
