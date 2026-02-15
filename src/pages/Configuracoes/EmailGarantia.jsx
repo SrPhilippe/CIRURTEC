@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
-import { Mail, Save, AlertCircle, Search } from 'lucide-react';
+import { Mail, Save, AlertCircle, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import './Configuracoes.css';
 
 export default function EmailGarantia() {
@@ -9,6 +9,7 @@ export default function EmailGarantia() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [expandedUserId, setExpandedUserId] = useState(null);
 
   useEffect(() => {
     fetchUsers();
@@ -47,6 +48,12 @@ export default function EmailGarantia() {
         setUsers(prev => prev.map(u => 
             u.id === userId ? { ...u, receive_warranty_emails: currentValue } : u
         ));
+    }
+  };
+
+  const toggleExpand = (userId) => {
+    if (window.innerWidth <= 768) {
+        setExpandedUserId(expandedUserId === userId ? null : userId);
     }
   };
 
@@ -106,24 +113,35 @@ export default function EmailGarantia() {
                     <tbody>
                         {filteredUsers.length > 0 ? (
                             filteredUsers.map(user => (
-                                <tr key={user.id}>
-                                    <td>{user.username}</td>
-                                    <td>{user.email}</td>
-                                    <td style={{ textAlign: 'center' }}>
-                                        <label className="switch">
-                                            <input 
-                                                type="checkbox" 
-                                                checked={!!user.receive_warranty_emails}
-                                                onChange={() => handleToggle(user.id, user.receive_warranty_emails)}
-                                            />
-                                            <span className="slider round"></span>
-                                        </label>
+                                <tr 
+                                    key={user.id} 
+                                    className={expandedUserId === user.id ? 'expanded' : ''}
+                                    onClick={() => toggleExpand(user.id)}
+                                >
+                                    <td data-label="Usuário" className="user-name-cell">
+                                        <span className="user-name-text">{user.username}</span>
+                                        <div className="mobile-chevron">
+                                            {expandedUserId === user.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                        </div>
+                                    </td>
+                                    <td data-label="E-mail" className="detail-cell">{user.email}</td>
+                                    <td data-label="Receber Cópias" style={{ textAlign: 'center' }} className="detail-cell">
+                                        <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
+                                            <label className="switch" onClick={(e) => e.stopPropagation()}>
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={!!user.receive_warranty_emails}
+                                                    onChange={() => handleToggle(user.id, user.receive_warranty_emails)}
+                                                />
+                                                <span className="slider round"></span>
+                                            </label>
+                                        </div>
                                     </td>
                                 </tr>
                             ))
                         ) : (
                             <tr>
-                                <td colSpan="3" style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
+                                <td colSpan="3" style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }} className="empty-state">
                                     Nenhum usuário encontrado.
                                 </td>
                             </tr>

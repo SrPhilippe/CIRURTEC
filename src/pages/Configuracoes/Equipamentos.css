@@ -320,3 +320,105 @@
     display: flex;
     justify-content: center;
 }
+
+/* --- MOBILE RESPONSIVENESS --- */
+@media (max-width: 768px) {
+    .equipment-settings-container {
+        padding: 1rem;
+        height: auto;
+        min-height: 100vh;
+        overflow-x: hidden;
+    }
+
+    .settings-header {
+        margin-bottom: 1.5rem;
+    }
+
+    .page-title {
+        font-size: 1.5rem;
+        /* Smaller title on mobile */
+    }
+
+    .hierarchy-canvas {
+        flex-direction: column;
+        padding: 1rem;
+        height: auto;
+        min-height: auto;
+        gap: 0;
+        /* Remove gap, use connector as spacer */
+    }
+
+    .column {
+        width: 100%;
+        min-height: auto;
+        /* Allow content to dictate height */
+        max-height: 400px;
+        /* Cap height to prevent scrolling forever */
+        margin-bottom: 0;
+    }
+
+    .column-title {
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+    }
+
+    /* Rotate connector to point down */
+    .connector-column {
+        width: 100%;
+        height: 60px;
+        margin: 0.5rem 0;
+    }
+
+    .connector-icon {
+        transform: rotate(90deg);
+    }
+
+    .connector-icon.active {
+        transform: rotate(90deg) scale(1.2);
+    }
+
+    /* Adjust connector line for vertical layout */
+    .connector-line {
+        right: auto;
+        left: 50%;
+        top: auto;
+        bottom: -2.5rem;
+        width: 2px;
+        height: 2rem;
+        transform: translateX(-50%);
+    }
+
+    @keyframes drawLine {
+        from {
+            height: 0;
+        }
+
+        to {
+            height: 2rem;
+        }
+    }
+
+    /* Mobile Touch Targets */
+    .hierarchy-node {
+        padding: 0.875rem 1rem;
+        /* Larger touch area */
+    }
+
+    .btn-action-node {
+        padding: 8px;
+        /* Larger touch area for buttons */
+        opacity: 1;
+        /* Always show actions on mobile */
+    }
+
+    /* Input sizing */
+    .add-item-box {
+        flex-direction: row;
+        /* Keep row */
+    }
+
+    .input-base {
+        font-size: 16px;
+        /* Prevent zoom on iOS */
+    }
+}

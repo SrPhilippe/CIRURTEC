@@ -141,7 +141,7 @@ export default function ClientesCadastrados() {
           <Building2 size={32} /> Clientes Cadastrados
         </h1>
         <div className="action-bar" style={{ marginTop: 0 }}>
-             <button className="btn-add-client" onClick={() => navigate('/clientes/novo')}>
+             <button className="btn btn-primary" onClick={() => navigate('/clientes/novo')}>
                 <Plus size={20} /> Novo Cliente
              </button>
         </div>
@@ -290,10 +290,10 @@ export default function ClientesCadastrados() {
                 {filteredClients.length > 0 ? (
                   filteredClients.map(client => (
                     <tr key={client.id}>
-                      <td className="font-medium">{client.nome_hospital}</td>
-                      <td>{client.cnpj}</td>
+                      <td className="font-medium" data-label="Nome do Hospital">{client.nome_hospital}</td>
+                      <td data-label="CNPJ">{client.cnpj}</td>
 
-                      <td>
+                      <td data-label="Ações">
                         <div className="action-buttons">
                           <button 
                             className="btn-icon btn-view" 

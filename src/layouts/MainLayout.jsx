@@ -13,9 +13,9 @@ const MainLayout = () => {
   }, [location.pathname]);
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', width: '100%', flexDirection: 'column' }}>
+    <div className="app-grid">
       
-      {/* MOBILE HEADER - Only visible on small screens */}
+      {/* MOBILE HEADER - Only visible on small screens (via CSS) */}
       <div className="mobile-header">
         <button 
           className="mobile-menu-btn"
@@ -26,24 +26,22 @@ const MainLayout = () => {
         <span className="mobile-logo-text">CIRURTEC</span>
       </div>
 
-      <div style={{ display: 'flex', flex: 1, position: 'relative' }}>
-        <Sidebar 
-            mobileOpen={isMobileOpen} 
-            setMobileOpen={setIsMobileOpen} 
-        />
-        
-        {/* OVERLAY for mobile */}
-        {isMobileOpen && (
-            <div 
-                className="sidebar-overlay"
-                onClick={() => setIsMobileOpen(false)}
-            />
-        )}
+      <Sidebar 
+          mobileOpen={isMobileOpen} 
+          setMobileOpen={setIsMobileOpen} 
+      />
+      
+      {/* OVERLAY for mobile */}
+      {isMobileOpen && (
+          <div 
+              className="sidebar-overlay"
+              onClick={() => setIsMobileOpen(false)}
+          />
+      )}
 
-        <div style={{ flex: 1, overflow: 'auto', width: '100%' }}>
-          <Outlet />
-        </div>
-      </div>
+      <main className="content-grid">
+        <Outlet />
+      </main>
     </div>
   );
 };

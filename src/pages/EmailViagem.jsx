@@ -162,7 +162,6 @@ export default function TravelEmail() {
       visitType: 'PREVENTIVA',
       returnSameDay: false,
       tasks: [''],
-      tasks: [''],
       sleepAt: '',
       hasOrigin: false,
       origin: ''

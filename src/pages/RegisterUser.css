@@ -188,3 +188,30 @@
     gap: 0.5rem;
     margin-bottom: 1rem;
 }
+
+/* --- MOBILE RESPONSIVENESS --- */
+@media (max-width: 640px) {
+    .register-container {
+        padding: 1rem;
+    }
+
+    .register-card {
+        padding: 1.5rem;
+    }
+
+    .register-form .form-actions,
+    .register-form > div[style*="display: flex"] {
+        flex-direction: column-reverse;
+        gap: 0.75rem !important;
+    }
+
+    .btn-secondary,
+    .register-button {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .register-button {
+        margin-left: 0 !important;
+    }
+}

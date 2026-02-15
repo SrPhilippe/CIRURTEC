@@ -5,7 +5,7 @@
   "type": "module",
   "homepage": "https://srphilippe.github.io/CIRURTEC",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host",
     "dev:server": "cd server && npm run dev",
     "dev:all": "concurrently \"npm run dev\" \"npm run dev:server\"",
     "build": "vite build",
@@ -18,6 +18,7 @@
     "axios": "^1.13.2",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.555.0",
+    "prop-types": "^15.8.1",
     "react": "^19.2.0",
     "react-datepicker": "^8.10.0",
     "react-dom": "^19.2.0",

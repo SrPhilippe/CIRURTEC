@@ -34,4 +34,10 @@ app.listen(PORT, () => {
     cron.schedule('0 */6 * * *', () => {
         checkAndSendNotifications()
     })
+
+    if (!process.env.JWT_SECRET) {
+        console.error('CRITICAL: JWT_SECRET is missing!')
+    } else {
+        console.log('JWT_SECRET loaded successfully.')
+    }
 })

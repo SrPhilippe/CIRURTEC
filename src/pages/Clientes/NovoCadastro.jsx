@@ -10,6 +10,11 @@ import DatePicker, { registerLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { ptBR } from 'date-fns/locale';
 
+// UI Components
+import Input from '../../components/ui/Input';
+import Select from '../../components/ui/Select';
+import Button from '../../components/ui/Button';
+
 registerLocale('pt-BR', ptBR);
 
 // Helper functions (outside component or inside)
@@ -590,117 +595,89 @@ export default function NovoCadastro() {
         {!isViewMode ? (
           <>
             {/* DADOS DO CLIENTE - MODE EDIT/CREATE */}
-            <div className="client-form-card">
+            <div className="card">
               <h2 className="form-section-title">Dados da Instituição</h2>
               
               <div className="form-grid">
-                <div className="form-group">
-                  <label className="form-label">
-                    CNPJ * 
-                    {loadingCnpj && <span style={{ marginLeft: '10px', fontSize: '0.8rem', color: '#6366f1' }}>Buscando dados...</span>}
-                  </label>
-                  <input 
-                    type="text" 
-                    name="cnpj" 
-                    value={clientData.cnpj}
-                    onChange={handleClientChange}
-                    required 
-                    maxLength={18}
-                    placeholder="00.000.000/0000-00"
-                    className={`form-input ${errors.cnpj ? 'input-error' : ''}`}
-                    disabled={loadingCnpj || (id && !checkPermission(currentUser, PERMISSIONS.EDIT_CLIENT_CNPJ))}
-                  />
-                  {errors.cnpj && <span className="error-text">{errors.cnpj}</span>}
-                </div>
+                <Input
+                  label="CNPJ"
+                  name="cnpj"
+                  value={clientData.cnpj}
+                  onChange={handleClientChange}
+                  required
+                  maxLength={18}
+                  placeholder="00.000.000/0000-00"
+                  error={errors.cnpj}
+                  disabled={loadingCnpj || (id && !checkPermission(currentUser, PERMISSIONS.EDIT_CLIENT_CNPJ))}
+                />
                 
-                <div className="form-group">
-                  <label className="form-label">Razão Social *</label>
-                  <input 
-                    type="text" 
-                    name="nomeHospital"
-                    value={clientData.nomeHospital}
-                    onChange={handleClientChange}
-                    required
-                    placeholder="Razão Social"
-                    className={`form-input ${errors.nomeHospital ? 'input-error' : ''}`}
-                    readOnly
-                    style={{ backgroundColor: '#f8fafc', cursor: 'not-allowed' }}
-                  />
-                  {errors.nomeHospital && <span className="error-text">{errors.nomeHospital}</span>}
-                </div>
+                <Input
+                  label="Razão Social"
+                  name="nomeHospital"
+                  value={clientData.nomeHospital}
+                  onChange={handleClientChange}
+                  required
+                  placeholder="Razão Social"
+                  error={errors.nomeHospital}
+                  readOnly
+                  style={{ backgroundColor: '#f8fafc', cursor: 'not-allowed' }}
+                />
 
-                <div className="form-group">
-                  <label className="form-label">Nome do Hospital</label>
-                  <input 
-                    type="text" 
-                    name="nomeFantasia"
-                    value={clientData.nomeFantasia}
-                    onChange={handleClientChange}
-                    placeholder="Nome Popular / Fantasia"
-                    className="form-input"
-                    ref={nomeHospitalRef}
-                  />
-                </div>
+                <Input
+                  ref={nomeHospitalRef}
+                  label="Nome do Hospital"
+                  name="nomeFantasia"
+                  value={clientData.nomeFantasia}
+                  onChange={handleClientChange}
+                  placeholder="Nome Popular / Fantasia"
+                  error={errors.nomeFantasia}
+                />
 
+                <Input
+                  label="E-mail 1"
+                  name="email1"
+                  type="email"
+                  value={clientData.email1}
+                  onChange={handleClientChange}
+                  required
+                  placeholder="admin@hospital.com"
+                  error={errors.email1}
+                />
 
+                <Input
+                  label="E-mail 2"
+                  name="email2"
+                  type="email"
+                  value={clientData.email2}
+                  onChange={handleClientChange}
+                  placeholder="financeiro@hospital.com"
+                  error={errors.email2}
+                />
 
-                <div className="form-group">
-                  <label className="form-label">E-mail 1 *</label>
-                  <input 
-                    type="email" 
-                    name="email1"
-                    value={clientData.email1}
-                    onChange={handleClientChange}
-                    required
-                    placeholder="admin@hospital.com"
-                    className={`form-input ${errors.email1 ? 'input-error' : ''}`}
-                  />
-                  {errors.email1 && <span className="error-text">{errors.email1}</span>}
-                </div>
+                <Input
+                  label="Contato 1"
+                  name="contato1"
+                  type="tel"
+                  value={clientData.contato1}
+                  onChange={handleClientChange}
+                  required
+                  placeholder="(31) 99999-9999"
+                  error={errors.contato1}
+                />
 
-                <div className="form-group">
-                  <label className="form-label">E-mail 2</label>
-                  <input 
-                    type="email" 
-                    name="email2"
-                    value={clientData.email2}
-                    onChange={handleClientChange}
-                    placeholder="financeiro@hospital.com"
-                    className={`form-input ${errors.email2 ? 'input-error' : ''}`}
-                  />
-                  {errors.email2 && <span className="error-text">{errors.email2}</span>}
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Contato 1 *</label>
-                  <input 
-                    type="tel" 
-                    name="contato1"
-                    value={clientData.contato1}
-                    onChange={handleClientChange}
-                    required
-                    placeholder="(31) 99999-9999"
-                    className={`form-input ${errors.contato1 ? 'input-error' : ''}`}
-                  />
-                  {errors.contato1 && <span className="error-text">{errors.contato1}</span>}
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Contato 2</label>
-                  <input 
-                    type="tel" 
-                    name="contato2"
-                    value={clientData.contato2}
-                    onChange={handleClientChange}
-                    placeholder="(31) 98888-8888"
-                    className="form-input"
-                  />
-                </div>
+                <Input
+                  label="Contato 2"
+                  name="contato2"
+                  type="tel"
+                  value={clientData.contato2}
+                  onChange={handleClientChange}
+                  placeholder="(31) 98888-8888"
+                />
               </div>
             </div>
 
             {/* EQUIPAMENTOS - MODE EDIT/CREATE */}
-            <div className="client-form-card equipments-section">
+            <div className="card equipments-section">
               <h2 className="form-section-title">Equipamentos Instalados</h2>
               
               <div className="equipment-table-wrapper">
@@ -934,19 +911,19 @@ export default function NovoCadastro() {
                       return (
                         <React.Fragment key={eq.id}>
                           <tr>
-                            <td>{eq.equipamento || '-'}</td>
-                            <td>{eq.modelo || '-'}</td>
-                            <td>{eq.numeroSerie || '-'}</td>
-                            <td>
+                            <td data-label="Equipamento">{eq.equipamento || '-'}</td>
+                            <td data-label="Modelo">{eq.modelo || '-'}</td>
+                            <td data-label="Número de Série">{eq.numeroSerie || '-'}</td>
+                            <td data-label="Tipo">
                               <span className={`badge badge-${eq.tipoInstalacao?.toLowerCase()}`}>
                                 {eq.tipoInstalacao}
                               </span>
                             </td>
-                            <td>{eq.dataNota ? eq.dataNota.split('-').reverse().join('/') : '-'}</td>
-                            <td style={{ fontWeight: '600', color: remainingWarranty === 'Garantia Expirada' ? '#dc2626' : '#059669' }}>
+                            <td data-label="Data Nota Fiscal">{eq.dataNota ? eq.dataNota.split('-').reverse().join('/') : '-'}</td>
+                            <td data-label="Garantia" style={{ fontWeight: '600', color: remainingWarranty === 'Garantia Expirada' ? '#dc2626' : '#059669' }}>
                               {remainingWarranty}
                             </td>
-                            <td>
+                            <td data-label="Ações">
                               <button
                                 type="button"
                                 onClick={() => toggleEquipmentExpand(eq.id)}
@@ -982,25 +959,25 @@ export default function NovoCadastro() {
                                       <tbody>
                                         <tr>
                                           <td>{eq.dataNota ? eq.dataNota.split('-').reverse().join('/') : '-'}</td>
-                                          <td>
+                                          <td data-label="3 Meses">
                                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                                               {maintenanceDates.threeMonths}
                                               {eq.sentNotifications?.includes(3) && <Check size={16} color="#0ea5e9" strokeWidth={3} title="E-mail enviado" />}
                                             </div>
                                           </td>
-                                          <td>
+                                          <td data-label="6 Meses">
                                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                                               {maintenanceDates.sixMonths}
                                               {eq.sentNotifications?.includes(6) && <Check size={16} color="#0ea5e9" strokeWidth={3} title="E-mail enviado" />}
                                             </div>
                                           </td>
-                                          <td>
+                                          <td data-label="9 Meses">
                                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                                               {maintenanceDates.nineMonths}
                                               {eq.sentNotifications?.includes(9) && <Check size={16} color="#0ea5e9" strokeWidth={3} title="E-mail enviado" />}
                                             </div>
                                           </td>
-                                          <td>
+                                          <td data-label="12 Meses">
                                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                                               {maintenanceDates.twelveMonths}
                                               {eq.sentNotifications?.includes(12) && <Check size={16} color="#0ea5e9" strokeWidth={3} title="E-mail enviado" />}

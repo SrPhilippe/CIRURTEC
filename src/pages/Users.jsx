@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { Users as UsersIcon, Search, Shield, ShieldAlert, User, UserPlus, Edit } from 'lucide-react';
+import { Users as UsersIcon, Search, Shield, ShieldAlert, User, UserPlus, Edit, ChevronDown, ChevronUp } from 'lucide-react';
 import './Users.css';
 
 const Users = () => {
@@ -10,6 +10,9 @@ const Users = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState('');
+  
+  // Mobile Expansion State
+  const [expandedUserId, setExpandedUserId] = useState(null);
 
   useEffect(() => {
     fetchUsers();
@@ -31,6 +34,12 @@ const Users = () => {
     (user.username && user.username.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  const toggleExpand = (userId) => {
+    if (window.innerWidth <= 768) {
+        setExpandedUserId(expandedUserId === userId ? null : userId);
+    }
+  };
 
   const getRoleIcon = (rights) => {
     switch (rights) {
@@ -86,17 +95,28 @@ const Users = () => {
             <tbody>
               {filteredUsers.length > 0 ? (
                 filteredUsers.map(user => (
-                  <tr key={user.id}>
-                    <td className="user-name-cell">
+                  <tr 
+                    key={user.id} 
+                    className={expandedUserId === user.id ? 'expanded' : ''}
+                    onClick={() => toggleExpand(user.id)}
+                  >
+                    <td className="user-name-cell" data-label="Usuário">
                       <div className="avatar-placeholder">
                         {user.username.charAt(0).toUpperCase()}
                       </div>
-                      {user.username}
+                      <span className="user-name-text">{user.username}</span>
+                      {/* Mobile Chevron */}
+                      <div className="mobile-chevron">
+                        {expandedUserId === user.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                      </div>
                     </td>
-                    <td>
+                    <td data-label="Ações" className="actions-cell">
                       <button 
                         className="btn-manage" 
-                        onClick={() => navigate(`/users/edit/${user.public_ID}`)}
+                        onClick={(e) => {
+                            e.stopPropagation(); // Prevent row toggle
+                            navigate(`/users/edit/${user.public_ID}`);
+                        }}
                         title="Gerenciar Usuário"
                         style={{
                             backgroundColor: '#f1f5f9', color: '#334155', border: '1px solid #e2e8f0', 
@@ -107,20 +127,20 @@ const Users = () => {
                         <Edit size={14} /> Gerenciar
                       </button>
                     </td>
-                    <td>{user.email}</td>
-                    <td>{user.role}</td>
-                    <td>
+                    <td data-label="E-mail" className="detail-cell">{user.email}</td>
+                    <td data-label="Cargo" className="detail-cell">{user.role}</td>
+                    <td data-label="Permissão" className="detail-cell">
                       <div className={`role-badge ${user.rights.toLowerCase()}`}>
                         {getRoleIcon(user.rights)}
                         <span>{user.rights}</span>
                       </div>
                     </td>
-                    <td>{new Date(user.created_at).toLocaleDateString('pt-BR')}</td>
+                    <td data-label="Data de Criação" className="detail-cell">{new Date(user.created_at).toLocaleDateString('pt-BR')}</td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="5" className="empty-state">
+                  <td colSpan="6" className="empty-state">
                     Nenhum usuário encontrado.
                   </td>
                 </tr>

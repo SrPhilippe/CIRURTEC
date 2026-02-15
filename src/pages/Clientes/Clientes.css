@@ -1,7 +1,9 @@
+/* Page Header & Container */
+/* .clientes-container is handled by page-specific logic, but we can verify if it's redundant. 
+   Most container logic is now in .content-grid, but this specific class might be used for override.
+   Keeping specific container style but removing generic ones. */
 .clientes-container {
-    padding: 2rem;
-    max-width: 1200px;
-    margin: 0 auto;
+    padding-bottom: 2rem;
 }
 
 .page-header {
@@ -20,15 +22,7 @@
     gap: 0.75rem;
 }
 
-/* Card Styles */
-.client-form-card {
-    background-color: var(--surface);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    padding: 2rem;
-    border: 1px solid var(--border);
-}
-
+/* Section Titles specific to form sections if needed, though they look close to global h2 */
 .form-section-title {
     font-size: 1.2rem;
     font-weight: 600;
@@ -41,41 +35,7 @@
     gap: 0.5rem;
 }
 
-.form-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 2rem;
-}
-
-.form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.form-label {
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: var(--text-secondary);
-}
-
-.form-input,
-.form-select {
-    padding: 0.75rem 1rem;
-    border: 1px solid var(--border);
-    border-radius: 0.5rem;
-    font-size: 0.95rem;
-    transition: all 0.2s;
-    outline: none;
-}
-
-.form-input:focus,
-.form-select:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-}
-
+/* Action Bar */
 .action-bar {
     display: flex;
     justify-content: flex-end;
@@ -83,61 +43,7 @@
     margin-top: 2rem;
 }
 
-.btn-primary,
-.btn-secondary {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.5rem;
-    border-radius: 0.5rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    border: none;
-}
-
-.btn-primary {
-    background-color: var(--primary);
-    color: white;
-}
-
-.btn-primary:hover {
-    background-color: var(--primary-hover);
-}
-
-.btn-secondary {
-    background-color: transparent;
-    border: 1px solid var(--border);
-    color: var(--text-secondary);
-}
-
-.btn-secondary:hover {
-    background-color: #f1f5f9;
-    color: var(--text-primary);
-}
-
-.btn-add-client {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.25rem;
-    background-color: #2563eb;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 0.95rem;
-    cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
-}
-
-.btn-add-client:hover {
-    background-color: #1d4ed8;
-    box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3);
-}
-
-/* Equipment Table Section (existing) */
+/* Equipment Table Specifics */
 .equipments-section {
     margin-top: 2rem;
 }
@@ -145,14 +51,14 @@
 .equipment-table-wrapper {
     overflow-x: auto;
     border: 1px solid var(--border);
-    border-radius: 0.5rem;
+    border-radius: var(--radius);
     margin-bottom: 1rem;
 }
 
 .equipment-table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 600px;
+    min-width: 800px;
 }
 
 .equipment-table th,
@@ -174,6 +80,29 @@
     border-bottom: none;
 }
 
+/* Custom Table Input for Equipment (Keep separate from global form-input if needed for table context) 
+   Actually, we can use global input with a modifier class or just style overrides. 
+   For now, keeping this but mapped to perform like global. 
+   Wait, the refactor in JSX used standard elements for table, I didn't replace table inputs yet.
+   I should leave table input styles or update them. 
+*/
+
+.table-input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid transparent;
+    border-radius: 0.25rem;
+    background: transparent;
+    transition: all 0.2s;
+}
+
+.table-input:hover,
+.table-input:focus {
+    background: white;
+    border-color: var(--border);
+}
+
+/* Button to add equipment */
 .btn-add-equip {
     width: 100%;
     padding: 1rem;
@@ -181,7 +110,7 @@
     border: 2px dashed #bae6fd;
     color: #0284c7;
     font-weight: 600;
-    border-radius: 0.5rem;
+    border-radius: var(--radius);
     cursor: pointer;
     transition: all 0.2s;
     display: flex;
@@ -195,144 +124,7 @@
     border-color: #7dd3fc;
 }
 
-.table-input {
-    width: 100%;
-    padding: 0.5rem;
-    border: 1px solid transparent;
-    border-radius: 0.25rem;
-    background: transparent;
-}
-
-.table-input:hover,
-.table-input:focus {
-    background: white;
-    border-color: var(--border);
-}
-
-.modern-select {
-    width: 100%;
-    padding: 0.5rem 2.5rem 0.5rem 0.75rem;
-    border: 1px solid transparent;
-    border-radius: 0.375rem;
-    background-color: transparent;
-    color: var(--text-primary);
-    cursor: pointer;
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 0.75rem center;
-    background-size: 1rem;
-    transition: all 0.2s;
-}
-
-.modern-select:hover {
-    background-color: white;
-    border-color: #cbd5e1;
-}
-
-.modern-select:focus {
-    background-color: white;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-    outline: none;
-}
-
-.modern-select:disabled {
-    background-color: #f1f5f9;
-    color: #94a3b8;
-    cursor: not-allowed;
-    background-image: none;
-}
-
-/* Styling options is limited in some browsers, but we apply what we can */
-.modern-select option {
-    padding: 12px;
-    background-color: #ffffff;
-    color: var(--text-primary);
-    font-weight: 500;
-    cursor: pointer;
-}
-
-.modern-select option:hover {
-    background-color: var(--primary);
-    /* Works in some non-Webkit browsers */
-    color: white;
-}
-
-.modern-select option:checked {
-    background-color: #eff6ff !important;
-    color: var(--primary) !important;
-    font-weight: 600;
-}
-
-.btn-icon-danger {
-    color: #ef4444;
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0.25rem;
-    border-radius: 0.25rem;
-}
-
-.btn-icon-danger:hover {
-    background-color: #fee2e2;
-}
-
-/* Validation Styles */
-.input-error {
-    border-color: #ef4444 !important;
-}
-
-.error-text {
-    color: #ef4444;
-    font-size: 0.75rem;
-    margin-top: 0.25rem;
-    display: block;
-}
-
-/* Alert Messages */
-.alert {
-    padding: 1rem 1.5rem;
-    border-radius: 0.5rem;
-    margin-bottom: 1.5rem;
-    font-weight: 500;
-    animation: slideDown 0.3s ease-out;
-}
-
-.alert-success {
-    background-color: #d1fae5;
-    color: #065f46;
-    border: 1px solid #6ee7b7;
-}
-
-.alert-error {
-    background-color: #fee2e2;
-    color: #991b1b;
-    border: 1px solid #fca5a5;
-}
-
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.btn-primary:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-/* --- NEW LIST STYLES --- */
-
-/* Search Bar */
+/* Search Bar (Specific to List Page) */
 .search-bar-container {
     margin-bottom: 1.5rem;
     max-width: 600px;
@@ -341,8 +133,12 @@
 
 .search-input {
     padding-left: 2.75rem;
-    /* Space for icon */
     width: 100%;
+    padding-right: 1rem;
+    padding-top: 0.6rem;
+    padding-bottom: 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
 }
 
 .input-wrapper {
@@ -368,7 +164,7 @@
     margin-left: 0.5rem;
     background-color: white;
     border: 1px solid var(--border);
-    border-radius: 0.5rem;
+    border-radius: var(--radius);
     color: var(--text-secondary);
     cursor: pointer;
     transition: all 0.2s;
@@ -386,7 +182,123 @@
     color: var(--primary);
 }
 
-/* Filter Modal */
+/* Alert Messages (Keep if different from global, but index.css didn't strictly define alerts, only shadowed them?) 
+   Actually I didn't add .alert to index.css. I should keep them here or move them.
+   For now, keep them here to avoid breaking.
+*/
+.alert {
+    padding: 1rem 1.5rem;
+    border-radius: var(--radius);
+    margin-bottom: 1.5rem;
+    font-weight: 500;
+    animation: slideDown 0.3s ease-out;
+}
+
+.alert-success {
+    background-color: #d1fae5;
+    color: #065f46;
+    border: 1px solid #6ee7b7;
+}
+
+.alert-warning {
+    background-color: #fef3c7;
+    border-color: #fbbf24;
+    color: #92400e;
+}
+
+.alert-error {
+    background-color: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Badges (Specific to Clients) */
+.badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.badge-cemig {
+    color: #008235;
+    border: 1px solid #b9f8cf;
+    background-color: #dcfce7;
+}
+
+.badge-baumer {
+    color: #0069a8;
+    border: 1px solid #b8e6fe;
+    background-color: #dff2fe;
+}
+
+.badge-cirurtec {
+    background-color: #FFF;
+    color: #0094de;
+    border: 1px solid #0094de;
+}
+
+/* Maintenance Schedule */
+.maintenance-schedule {
+    padding: 2rem;
+    animation: slideDown 0.3s ease-out;
+}
+
+.maintenance-title {
+    background-color: var(--primary);
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 0.3rem;
+    padding: 0.6rem 0;
+    opacity: 0.9;
+    border-radius: 0.5rem;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.maintenance-table-wrapper {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+.maintenance-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+}
+
+.maintenance-table th,
+.maintenance-table td {
+    padding: 0.75rem 1rem;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+}
+
+.maintenance-table th {
+    background-color: #f8fafc;
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+}
+
+/* Filter Modal (Specific) */
 .filter-modal-overlay {
     position: fixed;
     top: 0;
@@ -405,7 +317,7 @@
 .filter-modal {
     background: white;
     border-radius: 0.75rem;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
     width: 100%;
     max-width: 800px;
     max-height: 90vh;
@@ -422,7 +334,6 @@
     justify-content: space-between;
     align-items: center;
     background-color: var(--primary);
-    /* Teal color from screenshot example */
     color: white;
 }
 
@@ -443,11 +354,6 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.2s;
-}
-
-.close-btn:hover {
-    background: rgba(255, 255, 255, 0.3);
 }
 
 .filter-modal-body {
@@ -468,26 +374,6 @@
     gap: 0.5rem;
 }
 
-.filter-group label {
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--text-secondary);
-}
-
-.filter-group input {
-    padding: 0.625rem;
-    border: 1px solid var(--border);
-    border-radius: 0.375rem;
-    font-size: 0.95rem;
-    outline: none;
-    transition: all 0.2s;
-}
-
-.filter-group input:focus {
-    border-color: #0097a7;
-    box-shadow: 0 0 0 3px rgba(0, 151, 167, 0.1);
-}
-
 .filter-divider {
     grid-column: 1 / -1;
     font-size: 0.85rem;
@@ -497,7 +383,6 @@
     padding-bottom: 0.5rem;
     border-bottom: 1px solid var(--border);
     text-transform: uppercase;
-    letter-spacing: 0.05em;
 }
 
 .filter-modal-footer {
@@ -553,114 +438,19 @@
     text-align: left;
 }
 
-.clients-table.register th,
-.clients-table.register td {
-    text-align: center;
-}
-
-
 .clients-table th {
     background-color: #f8fafc;
     font-weight: 600;
     color: var(--text-secondary);
     font-size: 0.8rem;
     text-transform: uppercase;
-    letter-spacing: 0.02em;
-}
-
-.clients-table tr:last-child td {
-    border-bottom: none;
 }
 
 .clients-table tbody tr:hover {
     background-color: #f8fafc;
 }
 
-.font-medium {
-    font-weight: 500;
-}
-
-.text-center {
-    text-align: center;
-}
-
-/* Badges */
-.badge {
-    padding: 0.25rem 0.75rem;
-    border-radius: 9999px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-.badge-cemig {
-    color: #008235;
-    border: 1px solid #b9f8cf;
-    background-color: #dcfce7;
-}
-
-.badge-baumer {
-    color: #0069a8;
-    border: 1px solid #b8e6fe;
-    background-color: #dff2fe;
-}
-
-.badge-cirurtec {
-    background-color: #FFF;
-    color: #0094de;
-    border: 1px solid #0094de;
-}
-
-/* Action Buttons */
-.action-buttons {
-    display: flex;
-    gap: 0.5rem;
-}
-
-.btn-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.5rem;
-    border-radius: 0.375rem;
-    border: 1px solid transparent;
-    background: transparent;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.btn-view {
-    color: #3b82f6;
-}
-
-.btn-view:hover {
-    background-color: #eff6ff;
-}
-
-.btn-edit {
-    color: #f59e0b;
-}
-
-.btn-edit:hover {
-    background-color: #fef3c7;
-}
-
-.btn-delete {
-    color: #ef4444;
-}
-
-.btn-delete:hover {
-    background-color: #fee2e2;
-}
-
-.loading-container {
-    padding: 3rem;
-    text-align: center;
-    color: var(--text-secondary);
-}
-
-/* Document View Styles */
+/* Document Value (View Mode) */
 .document-value {
     padding: 0.75rem 0;
     font-size: 1rem;
@@ -670,119 +460,79 @@
     display: flex;
     width: 100%;
     flex: 1;
-}
-
-.document-value .badge {
-    margin: 0;
-}
-
-/* Delete Account Button */
-.btn-delete-account {
-    display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.5rem;
-    background-color: #fee2e2;
-    color: #dc2626;
-    border: 1px solid #fca5a5;
-    border-radius: 0.5rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
 }
 
-.btn-delete-account:hover {
-    background-color: #fecaca;
-    border-color: #f87171;
-}
+/* --- MOBILE FIRST TABLE ADAPTATION --- */
+@media (max-width: 768px) {
 
-/* Equipment Dropdown Styles */
-.btn-expand-equipment {
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    padding: 0.5rem;
-    border-radius: 0.375rem;
-    color: var(--text-secondary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-}
+    /* Hide Table Headers */
+    .clients-table thead,
+    .maintenance-table thead,
+    .equipment-table thead {
+        display: none;
+    }
 
-.btn-expand-equipment:hover {
-    background-color: #eff6ff;
-    color: var(--primary);
-}
+    /* Make Rows look like Cards */
+    .clients-table tbody tr,
+    .maintenance-table tbody tr,
+    .equipment-table tbody tr {
+        display: block;
+        background: white;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        margin-bottom: 1rem;
+        padding: 1rem;
+        box-shadow: var(--shadow);
+    }
 
-.equipment-details-row {
-    background-color: #f8fafc;
-}
+    /* Make Cells behave like rows inside the card */
+    .clients-table tbody td,
+    .maintenance-table tbody td,
+    .equipment-table tbody td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--border);
+        text-align: right;
+    }
 
-.equipment-details-row td {
-    padding: 0.65rem 0.5rem;
-    border-bottom: none !important;
-}
+    /* Last cell no border */
+    .clients-table tbody td:last-child,
+    .maintenance-table tbody td:last-child,
+    .equipment-table tbody td:last-child {
+        border-bottom: none;
+    }
 
-.maintenance-schedule {
-    padding: 2rem;
-    animation: slideDown 0.3s ease-out;
-}
+    /* Add Labels via data-label attribute */
+    .clients-table tbody td::before,
+    .maintenance-table tbody td::before,
+    .equipment-table tbody td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        margin-right: 1rem;
+        text-align: left;
+    }
 
-.maintenance-title {
-    background-color: var(--primary);
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #fff;
-    margin-bottom: 0.3rem;
-    padding: 0.6rem 0;
-    opacity: 0.8;
-    border-radius: 0.5rem;
-    text-align: center;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
+    /* Adjust Action Buttons container */
+    .action-buttons {
+        justify-content: flex-end;
+        width: 100%;
+    }
 
-.maintenance-table-wrapper {
-    border: 1px solid var(--border);
-    border-radius: 0.5rem;
-    overflow: hidden;
-}
+    /* Specific adjustment for Maintenance Schedule nested table */
+    .maintenance-table-wrapper {
+        border: none;
+        overflow: visible;
+    }
 
-.maintenance-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: white;
-}
-
-.maintenance-table th,
-.maintenance-table td {
-    padding: 0.75rem 1rem;
-    text-align: center;
-    border-bottom: 1px solid var(--border);
-}
-
-.maintenance-table th {
-    background-color: transparent;
-    font-weight: 600;
-    color: var(--text-secondary);
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-    padding: 0.5rem 1rem;
-}
-
-.maintenance-table tbody tr:last-child td {
-    border-bottom: none;
-}
-
-.maintenance-table tbody td {
-    color: var(--text-primary);
-    font-weight: 400;
-    font-size: 0.9rem;
-    padding: 0.5rem 1rem;
-}
-
-.maintenance-table tbody tr:hover {
-    background-color: #f8fafc;
+    .maintenance-table tbody tr {
+        margin-bottom: 0.5rem;
+        background: #f8fafc;
+        /* Slightly different bg for nested cards */
+    }
 }
