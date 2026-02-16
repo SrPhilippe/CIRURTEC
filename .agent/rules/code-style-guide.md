@@ -23,8 +23,3 @@ trigger: always_on
 ## 4. Design Integrity & Verification
 * **Verification:** Before implementing any changes, **always consult the `/inspirations` folder**.
 * **Visual Continuity:** Avoid abrupt or jarring stylistic changes. New UI elements must align strictly with the existing patterns in the inspirations folder to maintain a cohesive visual identity.
-
-## 5. Application Flow & Navigation
-* **New Pages:** Whenever a new page is created, it must be automatically integrated into both:
-    1.  The **Global Menu**.
-    2.  The **Home Page** layout.

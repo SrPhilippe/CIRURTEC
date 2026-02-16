@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import MenuCard from '../components/MenuCard';
-import { Car, Users, UserCircle, Settings, FileText, BarChart, HelpCircle, LogOut, User } from 'lucide-react';
+import { Car, Users, UserCircle, Settings, FileText, BarChart, HelpCircle, LogOut, User, Mail, Banknote, List, Plus, UserPlus } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import logo from '../assets/images/logo-cirurtec.png';
@@ -11,22 +11,27 @@ const Home = () => {
   const navigate = useNavigate();
 
   const menuItems = [
-    { title: 'Viagens', icon: Car, route: '/email-viagem', disabled: false },
-    { title: 'Clientes', icon: UserCircle, route: '/clientes/lista', disabled: false },
+    { title: 'E-mail Viagem', icon: Mail, route: '/viagens/email', disabled: false },
+    { title: 'Acerto de Viagem', icon: Banknote, route: '/viagens/acerto', disabled: false },
+    { title: 'Clientes Cadastrados', icon: List, route: '/clientes/lista', disabled: false },
+    { title: 'Novo Cadastro', icon: Plus, route: '/clientes/novo', disabled: false },
     { 
-      title: 'Usuários', 
-      icon: Users, 
+      title: 'Lista de Usuários', 
+      icon: List, 
       route: '/users', 
-      disabled: user?.rights !== 'ADMIN', // Only Admin
-      hidden: user?.rights !== 'ADMIN' // Optionally hide it entirely? Request said "unlock". Usually means visible but maybe restricted? Or just visible to Admin.
-      // "desbloquear o menu de usuários somente para ADMIN" -> "unlock ... only for ADMIN".
-      // Let's hide it for non-admins to avoid confusion, or show disabled. 
-      // Sidebar hides it. Consistency suggests hiding or disabling. 
-      // Let's hide it to keep UI clean, or if we want to show it exists but is locked, use disabled.
-      // I'll stick to hiding it if user is not admin, similar to Sidebar.
+      disabled: user?.rights !== 'ADMIN', 
+      hidden: user?.rights !== 'ADMIN'
     },
-    { title: 'Perfil', icon: User, route: '/perfil', disabled: false }, // Unlocked
-    { title: 'Configurações', icon: Settings, route: '/configuracoes/equipamentos', disabled: false }, // Added
+    { 
+      title: 'Cadastrar Usuário', 
+      icon: UserPlus, 
+      route: '/admin/register', 
+      disabled: user?.rights !== 'ADMIN', 
+      hidden: user?.rights !== 'ADMIN'
+    },
+    { title: 'Perfil', icon: User, route: '/perfil', disabled: false },
+    { title: 'Equipamentos', icon: Settings, route: '/configuracoes/equipamentos', disabled: false },
+    { title: 'E-mail Garantia', icon: Mail, route: '/configuracoes/email-garantia', disabled: false },
     { title: 'Relatórios', icon: FileText, route: '/reports', disabled: true },
     { title: 'Dashboard', icon: BarChart, route: '/dashboard', disabled: true },
     { title: 'Ajuda', icon: HelpCircle, route: '/help', disabled: true },

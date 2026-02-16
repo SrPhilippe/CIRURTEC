@@ -18,7 +18,8 @@ import {
   ChevronDown,
   LogOut,
   UserPlus,
-  Mail
+  Mail,
+  Banknote
 } from 'lucide-react';
 import logo from '../assets/images/logo-cirurtec.png';
 import './Sidebar.css';
@@ -62,7 +63,15 @@ const Sidebar = ({ mobileOpen, setMobileOpen }) => {
   const menuItems = [
     { title: user?.username || 'Perfil', icon: User, route: '/perfil' },
     { title: 'Início', icon: Home, route: '/', exact: true },
-    { title: 'Viagens', icon: Car, route: '/email-viagem' },
+    { 
+      title: 'Viagens', 
+      icon: Car, 
+      isSubmenu: true,
+      subItems: [
+        { title: 'E-mail Viagem', icon: Mail, route: '/viagens/email' },
+        { title: 'Acerto de Viagem', icon: Banknote, route: '/viagens/acerto' }
+      ]
+    },
     { 
       title: 'Clientes', 
       icon: Building2, 

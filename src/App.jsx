@@ -10,11 +10,13 @@ import ClientesCadastrados from './pages/Clientes/ClientesCadastrados';
 import NovoCadastro from './pages/Clientes/NovoCadastro';
 import ProtectedRoute from './components/ProtectedRoute';
 
-import Perfil from './pages/Perfil'; // Added
+import AcertoViagem from './pages/AcertoViagem'; // Added
+
+import Perfil from './pages/Perfil'; 
 import Users from './pages/Users';
 import EditUser from './pages/EditUser';
-import Equipamentos from './pages/Configuracoes/Equipamentos'; // Added
-import EmailGarantia from './pages/Configuracoes/EmailGarantia'; // Added
+import Equipamentos from './pages/Configuracoes/Equipamentos'; 
+import EmailGarantia from './pages/Configuracoes/EmailGarantia';
 
 function App() {
   return (
@@ -28,7 +30,8 @@ function App() {
           <Route element={<ProtectedRoute />}>
              <Route path="/" element={<Home />} />
              <Route element={<MainLayout />}>
-               <Route path="/email-viagem" element={<TravelEmail />} />
+               <Route path="/viagens/email" element={<TravelEmail />} /> {/* Updated route */}
+               <Route path="/viagens/acerto" element={<AcertoViagem />} /> {/* New route */}
                <Route path="/clientes/lista" element={<ClientesCadastrados />} />
                <Route path="/clientes/novo" element={<NovoCadastro />} />
                <Route path="/clientes/editar/:id" element={<NovoCadastro />} />
