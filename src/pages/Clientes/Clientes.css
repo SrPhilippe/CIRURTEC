@@ -177,9 +177,12 @@
 }
 
 .btn-filter.active {
-    background-color: #eff6ff;
-    border-color: var(--primary);
-    color: var(--primary);
+    background-color: #fff7ed;
+    /* Orange-50 */
+    border-color: #f97316;
+    /* Orange-500 */
+    color: #c2410c;
+    /* Orange-700 */
 }
 
 /* Alert Messages (Keep if different from global, but index.css didn't strictly define alerts, only shadowed them?) 

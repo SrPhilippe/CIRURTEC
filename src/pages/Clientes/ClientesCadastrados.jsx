@@ -4,17 +4,26 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { AuthContext } from '../../context/AuthContext';
 import { checkPermission, PERMISSIONS } from '../../utils/permissions';
+import SelectionModal from '../../components/SelectionModal';
 import './Clientes.css';
 
 export default function ClientesCadastrados() {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const { user: currentUser, loading: authLoading } = useContext(AuthContext); // Get authLoading
+  const { user: currentUser, loading: authLoading } = useContext(AuthContext);
   
+  // Equipment Data State
+  const [equipmentTypes, setEquipmentTypes] = useState([]);
+  const [equipmentModels, setEquipmentModels] = useState([]);
+
+  // Selection Modal State
+  const [selectionModalOpen, setSelectionModalOpen] = useState(false);
+  const [selectionType, setSelectionType] = useState(null); // 'EQUIPMENT' | 'MODEL'
+
   // Filter State
   const [showFilterModal, setShowFilterModal] = useState(false);
-  // ... (rest of state)
+  
   const [filters, setFilters] = useState({
     cnpj: '',
     nomeHospital: '', // nome_fantasia
@@ -22,7 +31,10 @@ export default function ClientesCadastrados() {
     email: '',
     equipamento: '',
     numeroSerie: '',
-    modelo: ''
+    modelo: '',
+    dataNotaStart: '',
+    dataNotaEnd: '',
+    tipo: ''
   });
 
   const [error, setError] = useState('');
@@ -30,6 +42,7 @@ export default function ClientesCadastrados() {
 
   useEffect(() => {
     fetchClients();
+    fetchEquipmentData();
   }, []);
 
   const fetchClients = async () => {
@@ -43,6 +56,47 @@ export default function ClientesCadastrados() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchEquipmentData = async () => {
+      try {
+          const response = await api.get('/equipment-settings/types');
+          setEquipmentTypes(response.data);
+          // Flatten models for easy access if needed, or just derive from types
+          const allModels = response.data.flatMap(type => type.models || []);
+          setEquipmentModels(allModels);
+      } catch (err) {
+          console.error('Erro ao buscar equipamentos:', err);
+      }
+  };
+
+  const handleOpenSelection = (type) => {
+      setSelectionType(type);
+      setSelectionModalOpen(true);
+  };
+
+  const handleSelection = (item) => {
+      if (selectionType === 'EQUIPMENT') {
+          setFilters(prev => ({ ...prev, equipamento: item.name }));
+      } else if (selectionType === 'MODEL') {
+          setFilters(prev => ({ ...prev, modelo: item.name }));
+      }
+      setSelectionModalOpen(false);
+  };
+
+  const getOptionsForSelection = () => {
+      if (selectionType === 'EQUIPMENT') {
+          return equipmentTypes;
+      } else if (selectionType === 'MODEL') {
+          // If a type is selected, filter models?
+          // For now, let's show all models or filter if 'equipamento' filter is set and matches a type
+          if (filters.equipamento) {
+              const selectedType = equipmentTypes.find(t => t.name === filters.equipamento);
+              if (selectedType) return selectedType.models || [];
+          }
+          return equipmentModels;
+      }
+      return [];
   };
 
   const handleDelete = async (id) => {
@@ -186,6 +240,7 @@ export default function ClientesCadastrados() {
                                 <label>CNPJ</label>
                                 <input 
                                     type="text" 
+                                    className="form-input"
                                     name="cnpj" 
                                     value={filters.cnpj} 
                                     onChange={handleFilterChange} 
@@ -196,6 +251,7 @@ export default function ClientesCadastrados() {
                                 <label>Nome do Hospital</label>
                                 <input 
                                     type="text" 
+                                    className="form-input"
                                     name="nomeHospital" 
                                     value={filters.nomeHospital} 
                                     onChange={handleFilterChange} 
@@ -206,6 +262,7 @@ export default function ClientesCadastrados() {
                                 <label>Razão Social</label>
                                 <input 
                                     type="text" 
+                                    className="form-input"
                                     name="razaoSocial" 
                                     value={filters.razaoSocial} 
                                     onChange={handleFilterChange} 
@@ -216,6 +273,7 @@ export default function ClientesCadastrados() {
                                 <label>E-mail</label>
                                 <input 
                                     type="text" 
+                                    className="form-input"
                                     name="email" 
                                     value={filters.email} 
                                     onChange={handleFilterChange} 
@@ -229,26 +287,31 @@ export default function ClientesCadastrados() {
                                 <label>Equipamento</label>
                                 <input 
                                     type="text" 
+                                    className="form-input cursor-pointer"
                                     name="equipamento" 
                                     value={filters.equipamento} 
-                                    onChange={handleFilterChange} 
-                                    placeholder="Ex: Autoclave"
+                                    onClick={() => handleOpenSelection('EQUIPMENT')}
+                                    readOnly
+                                    placeholder="Selecione o Tipo"
                                 />
                              </div>
                              <div className="filter-group">
                                 <label>Modelo</label>
                                 <input 
                                     type="text" 
+                                    className="form-input cursor-pointer"
                                     name="modelo" 
                                     value={filters.modelo} 
-                                    onChange={handleFilterChange} 
-                                    placeholder="Ex: XYZ-123"
+                                    onClick={() => handleOpenSelection('MODEL')}
+                                    readOnly
+                                    placeholder="Selecione o Modelo"
                                 />
                              </div>
                              <div className="filter-group">
                                 <label>Número de Série</label>
                                 <input 
                                     type="text" 
+                                    className="form-input"
                                     name="numeroSerie" 
                                     value={filters.numeroSerie} 
                                     onChange={handleFilterChange} 
@@ -325,6 +388,58 @@ export default function ClientesCadastrados() {
           </div>
         )}
       </div>
+
+        <SelectionModal 
+            isOpen={selectionModalOpen}
+            onClose={() => setSelectionModalOpen(false)}
+            title={selectionType === 'EQUIPMENT' ? 'Selecionar Equipamento' : 'Selecionar Modelo'}
+            options={getOptionsForSelection()}
+            onSelect={handleSelection}
+        />
+
+        {/* STATISTICS FOOTER */}
+        {Object.values(filters).some(Boolean) && (
+            <div className="filter-stats-footer" style={{
+                marginTop: '1.5rem',
+                padding: '1rem',
+                backgroundColor: '#fff7ed', // Orange-50
+                border: '1px solid #fed7aa', // Orange-200
+                borderRadius: '8px',
+                color: '#9a3412', // Orange-800
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                fontWeight: 500
+            }}>
+                <div>
+                    <span>Clientes encontrados: <strong>{filteredClients.length}</strong></span>
+                </div>
+                <div>
+                    <span>
+                        {filters.modelo || filters.equipamento || filters.numeroSerie ? (
+                            <>Equipamentos correspondentes: <strong>
+                                {filteredClients.reduce((total, client) => {
+                                    if (!client.equipments) return total;
+                                    const matchingEqs = client.equipments.filter(eq => {
+                                        if (!eq) return false;
+                                        let match = true;
+                                        if (filters.equipamento && (!eq.equipamento || !eq.equipamento.toLowerCase().includes(filters.equipamento.toLowerCase()))) match = false;
+                                        if (filters.modelo && (!eq.modelo || !eq.modelo.toLowerCase().includes(filters.modelo.toLowerCase()))) match = false;
+                                        if (filters.numeroSerie && (!eq.numero_serie || !eq.numero_serie.toLowerCase().includes(filters.numeroSerie.toLowerCase()))) match = false;
+                                        return match;
+                                    });
+                                    return total + matchingEqs.length;
+                                }, 0)}
+                            </strong></>
+                        ) : (
+                           <>Total de equipamentos nestes clientes: <strong>
+                               {filteredClients.reduce((total, client) => total + (client.equipments?.length || 0), 0)}
+                           </strong></>
+                        )}
+                    </span>
+                </div>
+            </div>
+        )}
     </div>
   );
 }
