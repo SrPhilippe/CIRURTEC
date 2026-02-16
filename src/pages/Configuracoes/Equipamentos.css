@@ -328,6 +328,8 @@
         height: auto;
         min-height: 100vh;
         overflow-x: hidden;
+        width: 100%;
+        max-width: 100vw;
     }
 
     .settings-header {
@@ -336,27 +338,36 @@
 
     .page-title {
         font-size: 1.5rem;
-        /* Smaller title on mobile */
+        word-break: break-word; /* Prevent long titles from forcing scroll */
     }
 
     .hierarchy-canvas {
+        display: flex; /* Ensure flex is active */
         flex-direction: column;
-        padding: 1rem;
+        padding: 0; /* Remove padding from canvas to let columns fill space */
+        background: transparent; /* Remove bg box look on mobile */
+        border: none;
         height: auto;
         min-height: auto;
-        gap: 0;
-        /* Remove gap, use connector as spacer */
+        gap: 0.5rem;
+        box-shadow: none;
     }
 
     .column {
         width: 100%;
+        max-width: 100%;
         min-height: auto;
-        /* Allow content to dictate height */
-        max-height: 400px;
-        /* Cap height to prevent scrolling forever */
+        max-height: none; /* Allow full expansion, let page scroll */
+        overflow: visible; /* Remove internal scroll, show all items */
         margin-bottom: 0;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
     }
 
+    .types-column, .models-column {
+        border-radius: 0.5rem;
+        border: 1px solid #e2e8f0;
+    }
+    
     .column-title {
         font-size: 0.9rem;
         margin-bottom: 1rem;
@@ -365,8 +376,12 @@
     /* Rotate connector to point down */
     .connector-column {
         width: 100%;
-        height: 60px;
-        margin: 0.5rem 0;
+        height: 40px;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden; /* Prevent overflow */
     }
 
     .connector-icon {
@@ -379,46 +394,36 @@
 
     /* Adjust connector line for vertical layout */
     .connector-line {
-        right: auto;
-        left: 50%;
-        top: auto;
-        bottom: -2.5rem;
-        width: 2px;
-        height: 2rem;
-        transform: translateX(-50%);
-    }
-
-    @keyframes drawLine {
-        from {
-            height: 0;
-        }
-
-        to {
-            height: 2rem;
-        }
+        display: none; /* Hide complex connector line on mobile to simplify and avoid overflow */
     }
 
     /* Mobile Touch Targets */
     .hierarchy-node {
-        padding: 0.875rem 1rem;
-        /* Larger touch area */
+        padding: 1rem; 
     }
 
     .btn-action-node {
         padding: 8px;
-        /* Larger touch area for buttons */
         opacity: 1;
-        /* Always show actions on mobile */
+        background: #f1f5f9; /* Visible bg for actions on mobile */
+        border-radius: 50%;
+        margin-left: 0.25rem;
     }
 
     /* Input sizing */
     .add-item-box {
         flex-direction: row;
-        /* Keep row */
+        width: 100%;
+        box-sizing: border-box;
     }
 
     .input-base {
         font-size: 16px;
-        /* Prevent zoom on iOS */
+        width: 100%; /* Ensure it adapts */
+        min-width: 0; /* Allow shrink */
+    }
+    
+    .empty-selection-state {
+        padding: 2rem;
     }
 }

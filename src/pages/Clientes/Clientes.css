@@ -466,6 +466,31 @@
 /* --- MOBILE FIRST TABLE ADAPTATION --- */
 @media (max-width: 768px) {
 
+    /* Page Header Adaptation */
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .action-bar {
+        width: 100%;
+        justify-content: flex-start;
+        margin-top: 0;
+    }
+
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* Clients Table Adaptation */
+    .clients-table {
+        white-space: normal;
+        /* Fix horizontal scroll caused by long names */
+    }
+
     /* Hide Table Headers */
     .clients-table thead,
     .maintenance-table thead,
@@ -496,6 +521,16 @@
         padding: 0.75rem 0;
         border-bottom: 1px solid var(--border);
         text-align: right;
+        flex-wrap: wrap;
+        /* Allow content to wrap if needed */
+        gap: 0.5rem;
+    }
+
+    .font-medium {
+        font-weight: 600;
+        color: var(--text-primary);
+        word-break: break-word;
+        /* Ensure long names break */
     }
 
     /* Last cell no border */
@@ -514,8 +549,11 @@
         color: var(--text-secondary);
         font-size: 0.85rem;
         text-transform: uppercase;
-        margin-right: 1rem;
+        margin-right: auto;
+        /* Push label to left, content to right */
         text-align: left;
+        flex-shrink: 0;
+        /* Prevent label from shrinking */
     }
 
     /* Adjust Action Buttons container */

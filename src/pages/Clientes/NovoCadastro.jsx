@@ -695,7 +695,7 @@ export default function NovoCadastro() {
                   <tbody>
                     {equipments.map((eq) => (
                       <tr key={eq.id}>
-                        <td>
+                        <td data-label="Equipamento">
                           <select
                             value={eq.equipamento}
                             onChange={(e) => handleEquipmentChange(eq.id, 'equipamento', e.target.value)}
@@ -708,7 +708,7 @@ export default function NovoCadastro() {
                           </select>
                           {errors[`eq-${eq.id}-equipamento`] && <span className="error-text">{errors[`eq-${eq.id}-equipamento`]}</span>}
                         </td>
-                        <td>
+                        <td data-label="Modelo">
                           <select
                             value={eq.modelo}
                             onChange={(e) => handleEquipmentChange(eq.id, 'modelo', e.target.value)}
@@ -722,7 +722,7 @@ export default function NovoCadastro() {
                           </select>
                           {errors[`eq-${eq.id}-modelo`] && <span className="error-text">{errors[`eq-${eq.id}-modelo`]}</span>}
                         </td>
-                        <td>
+                        <td data-label="Número de Série">
                           <input 
                             type="text" 
                             name={`numeroSerie-${eq.id}`}
@@ -732,7 +732,7 @@ export default function NovoCadastro() {
                             className="table-input"
                           />
                         </td>
-                        <td>
+                        <td data-label="Tipo">
                           <select 
                             value={eq.tipoInstalacao} 
                             onChange={(e) => handleEquipmentChange(eq.id, 'tipoInstalacao', e.target.value)}
@@ -743,7 +743,7 @@ export default function NovoCadastro() {
                             <option value="CEMIG">CEMIG</option>
                           </select>
                         </td>
-                        <td>
+                        <td data-label="Data Nota Fiscal">
                           <DatePicker
                             selected={eq.dataNota ? new Date(eq.dataNota + 'T00:00:00') : null}
                             onChange={(date) => handleEquipmentChange(eq.id, 'dataNota', date)}
@@ -759,7 +759,7 @@ export default function NovoCadastro() {
                           />
                           {errors[`eq-${eq.id}-dataNota`] && <span className="error-text">{errors[`eq-${eq.id}-dataNota`]}</span>}
                         </td>
-                        <td>
+                        <td className="action-cell">
                           { !isViewMode && canDeleteEquipment && (
                         <button 
                           type="button" 
