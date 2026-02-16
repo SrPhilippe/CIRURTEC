@@ -26,6 +26,7 @@ const Home = () => {
       // I'll stick to hiding it if user is not admin, similar to Sidebar.
     },
     { title: 'Perfil', icon: User, route: '/perfil', disabled: false }, // Unlocked
+    { title: 'Configurações', icon: Settings, route: '/configuracoes/equipamentos', disabled: false }, // Added
     { title: 'Relatórios', icon: FileText, route: '/reports', disabled: true },
     { title: 'Dashboard', icon: BarChart, route: '/dashboard', disabled: true },
     { title: 'Ajuda', icon: HelpCircle, route: '/help', disabled: true },
