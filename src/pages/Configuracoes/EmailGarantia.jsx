@@ -51,10 +51,14 @@ export default function EmailGarantia() {
     }
   };
 
-  const toggleExpand = (userId) => {
-    if (window.innerWidth <= 768) {
-        setExpandedUserId(expandedUserId === userId ? null : userId);
+
+  const getInitials = (name) => {
+    if (!name) return '??';
+    const parts = name.split(/[\s.]+/); // Split by space or dot
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     }
+    return (name.substring(0, 2)).toUpperCase();
   };
 
   const filteredUsers = users.filter(user => 
@@ -66,10 +70,13 @@ export default function EmailGarantia() {
     <div className="config-container">
       <div className="config-header">
         <h1 className="config-title">
-          <Mail size={32} /> Configuração de E-mail de Garantia
+          <Mail size={32} /> E-mail de Garantia
         </h1>
+        <p className="status-label" style={{ color: 'var(--primary)', marginBottom: '0.5rem' }}>
+          CONFIGURAÇÃO AUTOMÁTICA
+        </p>
         <p className="config-subtitle">
-            Selecione quais usuários devem receber uma cópia de todos os e-mails automáticos de garantia enviados aos clientes.
+            Gerencie os usuários que receberão cópias automáticas (Cc) dos e-mails de garantia enviados aos clientes.
         </p>
       </div>
 
@@ -87,67 +94,55 @@ export default function EmailGarantia() {
 
       <div className="config-card">
         {loading ? (
-            <p>Carregando...</p>
+            <div className="loading-container"><p>Carregando...</p></div>
         ) : (
             <>
-                <div style={{ marginBottom: '1.5rem', position: 'relative' }}>
-                    <Search size={20} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                <div className="search-container">
+                    <Search size={20} className="search-icon" />
                     <input 
                         type="text" 
-                        placeholder="Buscar usuário ou e-mail..." 
+                        placeholder="Buscar usuário..." 
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="form-input"
-                        style={{ paddingLeft: '40px' }}
                     />
                 </div>
 
-                <table className="config-table">
-                    <thead>
-                        <tr>
-                            <th>Usuário</th>
-                            <th>E-mail</th>
-                            <th style={{ textAlign: 'center' }}>Receber Cópias</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredUsers.length > 0 ? (
-                            filteredUsers.map(user => (
-                                <tr 
-                                    key={user.id} 
-                                    className={expandedUserId === user.id ? 'expanded' : ''}
-                                    onClick={() => toggleExpand(user.id)}
-                                >
-                                    <td data-label="Usuário" className="user-name-cell">
-                                        <span className="user-name-text">{user.username}</span>
-                                        <div className="mobile-chevron">
-                                            {expandedUserId === user.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                                        </div>
-                                    </td>
-                                    <td data-label="E-mail" className="detail-cell">{user.email}</td>
-                                    <td data-label="Receber Cópias" style={{ textAlign: 'center' }} className="detail-cell">
-                                        <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
-                                            <label className="switch" onClick={(e) => e.stopPropagation()}>
-                                                <input 
-                                                    type="checkbox" 
-                                                    checked={!!user.receive_warranty_emails}
-                                                    onChange={() => handleToggle(user.id, user.receive_warranty_emails)}
-                                                />
-                                                <span className="slider round"></span>
-                                            </label>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))
-                        ) : (
-                            <tr>
-                                <td colSpan="3" style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }} className="empty-state">
-                                    Nenhum usuário encontrado.
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
+                <div className="section-header">
+                    <span>LISTA DE USUÁRIOS</span>
+                    <span>STATUS</span>
+                </div>
+
+                <div className="user-card-list">
+                    {filteredUsers.length > 0 ? (
+                        filteredUsers.map(user => (
+                            <div key={user.id} className="user-config-card">
+                                <div className="user-info-section">
+                                    <div className="user-avatar">
+                                        {getInitials(user.username)}
+                                    </div>
+                                    <div className="user-details">
+                                        <span className="user-name">{user.username}</span>
+                                        <span className="user-email">{user.email}</span>
+                                    </div>
+                                </div>
+                                <div className="status-section">
+                                    <label className="switch">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={!!user.receive_warranty_emails}
+                                            onChange={() => handleToggle(user.id, user.receive_warranty_emails)}
+                                        />
+                                        <span className="slider round"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="empty-state" style={{ textAlign: 'center', padding: '3rem' }}>
+                            <p style={{ color: '#94a3b8' }}>Nenhum usuário encontrado.</p>
+                        </div>
+                    )}
+                </div>
             </>
         )}
       </div>

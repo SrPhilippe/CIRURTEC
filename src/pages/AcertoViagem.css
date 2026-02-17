@@ -1,0 +1,26 @@
+/* AcertoViagem Page Styles */
+
+.acerto-viagem-container {
+    padding-bottom: 2rem;
+}
+
+.content-placeholder {
+    padding: 2rem;
+    text-align: center;
+    color: #64748b;
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+}
+
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+    .acerto-viagem-container {
+        padding-bottom: 1rem;
+    }
+
+    .content-placeholder {
+        padding: 1.5rem 1rem;
+        font-size: 0.9rem;
+    }
+}

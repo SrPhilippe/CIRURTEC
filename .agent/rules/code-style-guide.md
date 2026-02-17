@@ -25,3 +25,4 @@ trigger: always_on
 ## 4. Design Integrity & Verification
 * **Verification:** Before implementing any changes, **always consult the `/inspirations` folder**.
 * **Visual Continuity:** Avoid abrupt or jarring stylistic changes. New UI elements must align strictly with the existing patterns in the inspirations folder to maintain a cohesive visual identity.
+*Never propose dark-theme features

@@ -185,10 +185,7 @@
     /* Orange-700 */
 }
 
-/* Alert Messages (Keep if different from global, but index.css didn't strictly define alerts, only shadowed them?) 
-   Actually I didn't add .alert to index.css. I should keep them here or move them.
-   For now, keep them here to avoid breaking.
-*/
+/* Alert Messages (Keep if different from global) */
 .alert {
     padding: 1rem 1.5rem;
     border-radius: var(--radius);
@@ -466,114 +463,310 @@
     align-items: center;
 }
 
-/* --- MOBILE FIRST TABLE ADAPTATION --- */
+/* --- MOBILE OPTIMIZATIONS (max-width: 768px) --- */
 @media (max-width: 768px) {
 
     /* Page Header Adaptation */
     .page-header {
         flex-direction: column;
         align-items: flex-start;
-        gap: 1rem;
-        margin-bottom: 1.5rem;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
     }
 
+    .page-title {
+        font-size: 1.5rem;
+    }
+
+    /* Primary CTA Positioning - Thumb Zone Optimization */
     .action-bar {
-        width: 100%;
-        justify-content: flex-start;
-        margin-top: 0;
+        position: sticky;
+        bottom: 0;
+        background: white;
+        padding: 1rem;
+        border-top: 1px solid var(--border);
+        box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+        z-index: 10;
+        margin-top: 1rem;
     }
 
-    .btn {
+    .action-bar button {
         width: 100%;
         justify-content: center;
+        min-height: 48px;
     }
 
-    /* Clients Table Adaptation */
-    .clients-table {
-        white-space: normal;
-        /* Fix horizontal scroll caused by long names */
+    /* Search Bar - Full Width Mobile */
+    .search-bar-container {
+        flex-direction: column;
+        max-width: 100%;
+        gap: 0.5rem;
     }
 
-    /* Hide Table Headers */
-    .clients-table thead,
-    .maintenance-table thead,
+    .btn-filter {
+        width: 100%;
+        justify-content: center;
+        min-height: 44px;
+        margin-left: 0;
+        margin-bottom: 0.5rem;
+    }
+
+    .input-wrapper {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    /* ========================================
+       EQUIPMENT TABLE → CARD TRANSFORMATION
+       ======================================== */
+    .equipment-table-wrapper {
+        overflow: visible;
+        border: none;
+    }
+
+    .equipment-table {
+        display: block;
+        width: 100%;
+        min-width: 0 !important;
+    }
+
     .equipment-table thead {
         display: none;
     }
 
-    /* Make Rows look like Cards */
-    .clients-table tbody tr,
-    .maintenance-table tbody tr,
+    .equipment-table tbody {
+        display: block;
+    }
+
     .equipment-table tbody tr {
         display: block;
         background: white;
         border: 1px solid var(--border);
         border-radius: var(--radius);
-        margin-bottom: 1rem;
         padding: 1rem;
-        box-shadow: var(--shadow);
+        margin-bottom: 1rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        position: relative;
     }
 
-    /* Make Cells behave like rows inside the card */
-    .clients-table tbody td,
-    .maintenance-table tbody td,
     .equipment-table tbody td {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+        display: block;
+        width: 100% !important;
         padding: 0.75rem 0;
-        border-bottom: 1px solid var(--border);
-        text-align: right;
-        flex-wrap: wrap;
-        /* Allow content to wrap if needed */
-        gap: 0.5rem;
+        border: none;
+        text-align: left;
     }
 
-    .font-medium {
-        font-weight: 600;
-        color: var(--text-primary);
-        word-break: break-word;
-        /* Ensure long names break */
-    }
-
-    /* Last cell no border */
-    .clients-table tbody td:last-child,
-    .maintenance-table tbody td:last-child,
-    .equipment-table tbody td:last-child {
-        border-bottom: none;
-    }
-
-    /* Add Labels via data-label attribute */
-    .clients-table tbody td::before,
-    .maintenance-table tbody td::before,
     .equipment-table tbody td::before {
         content: attr(data-label);
+        display: block;
+        font-size: 0.75rem;
         font-weight: 600;
         color: var(--text-secondary);
-        font-size: 0.85rem;
         text-transform: uppercase;
-        margin-right: auto;
-        /* Push label to left, content to right */
-        text-align: left;
-        flex-shrink: 0;
-        /* Prevent label from shrinking */
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
     }
 
-    /* Adjust Action Buttons container */
+    .equipment-table tbody td:last-child {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        padding: 0;
+        width: auto !important;
+    }
+
+    .equipment-table tbody td:last-child::before {
+        display: none;
+    }
+
+    /* ========================================
+       CLIENTS TABLE → CARD TRANSFORMATION
+       ======================================== */
+    .table-responsive {
+        border: none;
+        overflow: visible;
+    }
+
+    .clients-table {
+        display: block;
+        width: 100%;
+        border: none;
+        white-space: normal;
+    }
+
+    .clients-table thead {
+        display: none;
+    }
+
+    .clients-table tbody {
+        display: block;
+    }
+
+    .clients-table tbody tr {
+        display: block;
+        background: white;
+        border: 1px solid var(--border);
+        border-left: 4px solid var(--primary);
+        border-radius: var(--radius);
+        padding: 1rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        position: relative;
+    }
+
+    .clients-table tbody td {
+        display: block;
+        width: 100%;
+        padding: 0.5rem 0;
+        border: none;
+        text-align: left;
+    }
+
+    .clients-table tbody td.font-medium {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        padding-top: 0;
+        margin-bottom: 0.25rem;
+    }
+
+    .clients-table tbody td.font-medium::before {
+        display: none;
+    }
+
+    .clients-table tbody td::before,
+    .maintenance-table tbody td::before {
+        content: attr(data-label);
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.25rem;
+    }
+
+    .clients-table tbody td[data-label="Ações"] {
+        border-top: 1px solid var(--border);
+        margin-top: 0.5rem;
+        padding-top: 1rem;
+    }
+
+    .clients-table tbody td[data-label="Ações"]::before {
+        display: none;
+    }
+
     .action-buttons {
         justify-content: flex-end;
-        width: 100%;
+        gap: 1rem;
     }
 
-    /* Specific adjustment for Maintenance Schedule nested table */
+    /* ========================================
+       MAINTENANCE TABLE → CARD TRANSFORMATION
+       ======================================== */
     .maintenance-table-wrapper {
         border: none;
         overflow: visible;
     }
 
+    .maintenance-table {
+        display: block;
+        width: 100%;
+    }
+
+    .maintenance-table thead {
+        display: none;
+    }
+
+    .maintenance-table tbody {
+        display: block;
+    }
+
     .maintenance-table tbody tr {
-        margin-bottom: 0.5rem;
+        display: block;
+        margin-bottom: 1rem;
+        padding: 1rem;
         background: #f8fafc;
-        /* Slightly different bg for nested cards */
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+    }
+
+    .maintenance-table tbody td {
+        display: block;
+        padding: 0.5rem 0;
+        border: none;
+        text-align: left;
+    }
+
+    /* ========================================
+       UX & TOUCH OPTIMIZATIONS
+       ======================================== */
+    .form-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1rem;
+    }
+
+    .form-input,
+    .table-input,
+    .modern-select {
+        min-height: 48px;
+        font-size: 16px;
+        padding: 0.75rem 1rem;
+    }
+
+    .btn-primary,
+    .btn-secondary,
+    .btn-danger {
+        min-height: 48px;
+        padding: 0.875rem 1.5rem;
+        font-size: 1rem;
+        font-weight: 600;
+    }
+
+    .btn-icon,
+    .btn-icon-danger {
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    .client-form-card {
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .document-value {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 0.75rem;
+    }
+
+    .document-value button {
+        align-self: flex-end;
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    .filter-modal {
+        width: 95%;
+        max-width: 95%;
+        border-radius: 1rem 1rem 0 0;
+    }
+
+    .filter-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .filter-modal-footer {
+        flex-direction: column-reverse;
+        position: sticky;
+        bottom: 0;
+    }
+
+    .btn-primary:active,
+    .btn-secondary:active,
+    .btn-danger:active {
+        transform: scale(0.98);
     }
 }

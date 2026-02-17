@@ -99,7 +99,6 @@
 .users-table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 800px;
 }
 
 .users-table th {

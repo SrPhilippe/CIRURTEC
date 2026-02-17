@@ -113,3 +113,37 @@
     color: #64748b;
     font-size: 0.9rem;
 }
+
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+    .selection-modal {
+        max-width: 95%;
+        max-height: 90vh;
+    }
+
+    .selection-header {
+        padding: 1rem;
+    }
+
+    .selection-header h3 {
+        font-size: 1rem;
+    }
+
+    .selection-search-input {
+        font-size: 16px;
+        /* Prevent iOS zoom */
+        min-height: 44px;
+    }
+
+    .selection-item {
+        padding: 1rem;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+    }
+
+    .btn-close-selection {
+        min-width: 44px;
+        min-height: 44px;
+    }
+}
