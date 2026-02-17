@@ -330,4 +330,9 @@ input:checked + .slider:before {
     .config-table {
         display: none;
     }
+
+    .equipment-settings-container {
+        margin: 0;
+        padding: 0;
+    }
 }
