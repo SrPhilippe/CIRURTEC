@@ -4,6 +4,8 @@ trigger: always_on
 
 # Antigravity: Global Styling & Design Rules
 
+> This rule keeps the layout consistancy of the app.
+
 ## 1. Mobile-First & Responsive Excellence
 * **Priority:** The application must be **100% mobile-friendly**.
 * **Adaptability:** You are authorized and encouraged to make **extreme alterations** to the layout for mobile devices. Do not simply shrink desktop views; reimagine the interface for touch.
