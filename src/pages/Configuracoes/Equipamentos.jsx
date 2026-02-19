@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Plus, Trash2, Settings, Box, ChevronRight, ChevronUp, X, AlertCircle, Edit2, Check } from 'lucide-react';
-import api from '../../services/api';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from '../../services/firebase';
 import './Equipamentos.css';
 import { AuthContext } from '../../context/AuthContext';
 import DeleteConfirmationModal from '../../components/DeleteConfirmationModal';
@@ -37,8 +38,11 @@ const Equipamentos = () => {
     const fetchTypes = async () => {
         try {
             setLoading(true);
-            const response = await api.get('/equipment-settings/types');
-            setTypes(response.data);
+            const docRef = doc(db, 'settings', 'equipment_hierarchy');
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                setTypes(docSnap.data().types || []);
+            }
         } catch (err) {
             setError('Erro ao carregar equipamentos.');
             console.error(err);
@@ -47,27 +51,38 @@ const Equipamentos = () => {
         }
     };
 
+    const saveHierarchy = async (newTypes) => {
+        try {
+            await setDoc(doc(db, 'settings', 'equipment_hierarchy'), { types: newTypes });
+            setTypes(newTypes);
+        } catch (err) {
+            setError('Erro ao salvar no Firestore.');
+            console.error(err);
+        }
+    };
+
     const handleAddType = async () => {
         if (!newType.trim()) return;
-        try {
-            await api.post('/equipment-settings/types', { name: newType });
-            setNewType('');
-            fetchTypes();
-        } catch (err) {
-            setError(err.response?.data?.error || 'Erro ao adicionar tipo.');
-        }
+        const nt = { id: Date.now(), name: newType.toUpperCase(), models: [] };
+        const updatedTypes = [...types, nt];
+        await saveHierarchy(updatedTypes);
+        setNewType('');
     };
 
     const handleAddModel = async (typeId) => {
         const modelName = newModel[typeId];
         if (!modelName || !modelName.trim()) return;
-        try {
-            await api.post('/equipment-settings/models', { name: modelName, type_id: typeId });
-            setNewModel(prev => ({ ...prev, [typeId]: '' }));
-            fetchTypes();
-        } catch (err) {
-            setError(err.response?.data?.error || 'Erro ao adicionar modelo.');
-        }
+        const updatedTypes = types.map(t => {
+            if (t.id === typeId) {
+                return { 
+                    ...t, 
+                    models: [...(t.models || []), { id: Date.now(), name: modelName.toUpperCase() }]
+                };
+            }
+            return t;
+        });
+        await saveHierarchy(updatedTypes);
+        setNewModel(prev => ({ ...prev, [typeId]: '' }));
     };
 
     const requestDelete = (e, item, type) => {
@@ -78,21 +93,19 @@ const Equipamentos = () => {
 
     const confirmDelete = async () => {
         if (!itemToDelete) return;
-        try {
-            if (itemToDelete.type === 'TYPE') {
-                await api.delete(`/equipment-settings/types/${itemToDelete.id}`);
-                if (expandedTypeId === itemToDelete.id) setExpandedTypeId(null);
-            } else {
-                await api.delete(`/equipment-settings/models/${itemToDelete.id}`);
-            }
-            fetchTypes();
-        } catch (err) {
-            console.error(err);
-            alert('Erro ao excluir: ' + (err.response?.data?.error || err.message));
-        } finally {
-            setDeleteModalOpen(false);
-            setItemToDelete(null);
+        let updatedTypes;
+        if (itemToDelete.type === 'TYPE') {
+            updatedTypes = types.filter(t => t.id !== itemToDelete.id);
+            if (expandedTypeId === itemToDelete.id) setExpandedTypeId(null);
+        } else {
+            updatedTypes = types.map(t => ({
+                ...t,
+                models: t.models?.filter(m => m.id !== itemToDelete.id) || []
+            }));
         }
+        await saveHierarchy(updatedTypes);
+        setDeleteModalOpen(false);
+        setItemToDelete(null);
     };
 
     const startEditing = (e, id, type, currentValue) => {
@@ -105,18 +118,18 @@ const Equipamentos = () => {
     const saveEditing = async (e) => {
         e.stopPropagation();
         if (!editValue.trim()) return;
-        try {
-            if (editingType === 'TYPE') {
-                await api.put(`/equipment-settings/types/${editingId}`, { name: editValue });
-            } else {
-                await api.put(`/equipment-settings/models/${editingId}`, { name: editValue });
-            }
-            setEditingId(null);
-            setEditingType(null);
-            fetchTypes();
-        } catch (err) {
-            setError(err.response?.data?.error || 'Erro ao renomear.');
+        let updatedTypes;
+        if (editingType === 'TYPE') {
+            updatedTypes = types.map(t => t.id === editingId ? { ...t, name: editValue.toUpperCase() } : t);
+        } else {
+            updatedTypes = types.map(t => ({
+                ...t,
+                models: t.models?.map(m => m.id === editingId ? { ...m, name: editValue.toUpperCase() } : m) || []
+            }));
         }
+        await saveHierarchy(updatedTypes);
+        setEditingId(null);
+        setEditingType(null);
     };
 
     const getIconForType = (name) => {

@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Building2, Filter, Eye, Edit, Trash2, Search, Plus, X, Eraser } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import api from '../../services/api';
+import { collection, getDocs, doc, getDoc, deleteDoc } from 'firebase/firestore';
+import { db } from '../../services/firebase';
 import { AuthContext } from '../../context/AuthContext';
 import { checkPermission, PERMISSIONS } from '../../utils/permissions';
 import SelectionModal from '../../components/SelectionModal';
@@ -48,8 +49,28 @@ export default function ClientesCadastrados() {
   const fetchClients = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/clients');
-      setClients(response.data);
+      const querySnapshot = await getDocs(collection(db, 'clients'));
+      const clientsData = [];
+      
+      // Fetch equipments for each client to maintain current logic
+      // Note: In a large system, we'd use a different approach, but for now this keeps filtering working.
+      for (const clientDoc of querySnapshot.docs) {
+        const data = clientDoc.data();
+        // Fetch equipments associated with this client
+        // In my migration script, equipments.clientId is the client's CNPJ
+        const eqSnapshot = await getDocs(collection(db, 'equipments'));
+        const clientEquipments = eqSnapshot.docs
+            .map(d => d.data())
+            .filter(eq => eq.clientId === data.cnpj);
+
+        clientsData.push({
+          id: clientDoc.id,
+          ...data,
+          equipments: clientEquipments
+        });
+      }
+      
+      setClients(clientsData);
     } catch (err) {
       console.error('Erro ao buscar clientes:', err);
       setError('Não foi possível carregar a lista de clientes.');
@@ -60,11 +81,18 @@ export default function ClientesCadastrados() {
 
   const fetchEquipmentData = async () => {
       try {
-          const response = await api.get('/equipment-settings/types');
-          setEquipmentTypes(response.data);
-          // Flatten models for easy access if needed, or just derive from types
-          const allModels = response.data.flatMap(type => type.models || []);
-          setEquipmentModels(allModels);
+          // This matches settings/equipment_hierarchy doc in firestore_schema.md
+          const settingsDoc = await getDoc(doc(db, 'settings', 'equipment_hierarchy'));
+          if (settingsDoc.exists()) {
+              const data = settingsDoc.data();
+              // data.types is an array: [ { id, name, models: [ { id, name } ] } ]
+              const types = (data.types || []).map(type => ({
+                  name: type.name,
+                  models: (type.models || []).map(model => ({ name: model.name }))
+              }));
+              setEquipmentTypes(types);
+              setEquipmentModels(types.flatMap(t => t.models));
+          }
       } catch (err) {
           console.error('Erro ao buscar equipamentos:', err);
       }
@@ -108,7 +136,7 @@ export default function ClientesCadastrados() {
 
     if (window.confirm('Tem certeza que deseja excluir este cliente?')) {
       try {
-        await api.delete(`/clients/${id}`);
+        await deleteDoc(doc(db, 'clients', id));
         setClients(clients.filter(client => client.id !== id));
       } catch (err) {
         console.error('Erro ao excluir cliente:', err);

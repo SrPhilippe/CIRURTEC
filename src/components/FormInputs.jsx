@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
-import api from '../services/api';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../services/firebase';
 import useDebounce from '../hooks/useDebounce';
 
 // --- UsernameInput ---
@@ -28,8 +29,9 @@ export const UsernameInput = ({ value, onChange, currentUsername, required = tru
 
       setIsCheckingUsername(true);
       try {
-        const response = await api.get(`/auth/check-username/${debouncedUsername}`);
-        setUsernameAvailable(!response.data.exists);
+        const q = query(collection(db, 'users'), where('username', '==', debouncedUsername));
+        const querySnapshot = await getDocs(q);
+        setUsernameAvailable(querySnapshot.empty);
       } catch (error) {
         console.error(error);
         setUsernameAvailable(null);
@@ -116,9 +118,9 @@ export const EmailInput = ({ value, onChange, currentEmail, required = true, dis
 
       setIsCheckingEmail(true);
       try {
-        // We need to encode the email to pass it safely in the URL
-        const response = await api.get(`/auth/check-email/${encodeURIComponent(debouncedEmail)}`);
-        setEmailAvailable(!response.data.exists);
+        const q = query(collection(db, 'users'), where('email', '==', debouncedEmail));
+        const querySnapshot = await getDocs(q);
+        setEmailAvailable(querySnapshot.empty);
       } catch (error) {
         console.error(error);
         setEmailAvailable(null);

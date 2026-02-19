@@ -21,7 +21,7 @@ import EmailGarantia from './pages/Configuracoes/EmailGarantia';
 function App() {
   return (
     <AuthProvider>
-      <Router basename="/CIRURTEC">
+      <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/redefinir-senha" element={<RedefinirSenha />} />

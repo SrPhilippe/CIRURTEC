@@ -1,5 +1,14 @@
 import React, { createContext, useState, useEffect } from 'react';
-import api from '../services/api';
+import { 
+  onAuthStateChanged, 
+  signInWithEmailAndPassword, 
+  signOut, 
+  createUserWithEmailAndPassword,
+  updateEmail,
+  updatePassword
+} from 'firebase/auth';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { auth, db } from '../services/firebase';
 
 export const AuthContext = createContext();
 
@@ -8,60 +17,108 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (e) {
-        console.error("Failed to parse user from local storage", e);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        // User is signed in, fetch additional profile data from Firestore
+        const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+        if (userDoc.exists()) {
+          const userData = {
+            id: firebaseUser.uid,
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            ...userDoc.data(),
+            accessToken: await firebaseUser.getIdToken()
+          };
+          setUser(userData);
+          localStorage.setItem('user', JSON.stringify(userData));
+        }
+      } else {
+        setUser(null);
         localStorage.removeItem('user');
       }
-    }
-    setLoading(false);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const login = async (usernameOrEmail, password) => {
-    const response = await api.post('/auth/login', {
-      usernameOrEmail,
-      password,
-    });
-    if (response.data.accessToken) {
-      localStorage.setItem('user', JSON.stringify(response.data));
-      setUser(response.data);
+    // Note: Firebase Auth primarily uses email. 
+    // If we want to support username login, we'd need a lookup table in Firestore.
+    // For now, we'll assume email login as per standard Firebase patterns.
+    const userCredential = await signInWithEmailAndPassword(auth, usernameOrEmail, password);
+    const firebaseUser = userCredential.user;
+    
+    const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+    if (userDoc.exists()) {
+      const userData = {
+        id: firebaseUser.uid,
+        uid: firebaseUser.uid,
+        email: firebaseUser.email,
+        ...userDoc.data(),
+        accessToken: await firebaseUser.getIdToken()
+      };
+      setUser(userData);
+      localStorage.setItem('user', JSON.stringify(userData));
+      return userData;
     }
-    return response.data;
+    throw new Error('Usuário não encontrado no banco de dados.');
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await signOut(auth);
     localStorage.removeItem('user');
     setUser(null);
   };
 
   const register = async (username, email, password, role, rights) => {
-    return await api.post('/auth/register', {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const firebaseUser = userCredential.user;
+
+    const userData = {
       username,
       email,
-      password,
-      role,
-      rights
-    });
+      role: role || 'Padrão',
+      rights: rights || 'Padrão',
+      public_ID: Math.random().toString(36).substr(2, 9), // Simple replacement for nanoid
+      receive_warranty_emails: false,
+      createdAt: new Date()
+    };
+
+    await setDoc(doc(db, 'users', firebaseUser.uid), userData);
+    
+    return { uid: firebaseUser.uid, ...userData };
   };
 
   const updateProfile = async (id, data) => {
-    const response = await api.put(`/auth/users/${id}`, data);
-    if (response.data.user) {
-        // Update local user state but keep the token!
-        const currentUser = JSON.parse(localStorage.getItem('user'));
-        const updatedUser = { ...currentUser, ...response.data.user };
-        
-        // Rights/Role might not change but if they do, we rely on the backend response
-        // Note: Code above in backend returns { id, username, email, role, rights }
-        // We preserve accessToken from existing local storage user
-        
-        localStorage.setItem('user', JSON.stringify(updatedUser));
-        setUser(updatedUser);
+    const userRef = doc(db, 'users', id);
+    const updates = { ...data };
+
+    // If email is being updated, we need special handling for Firebase Auth
+    if (updates.email && updates.email !== auth.currentUser.email) {
+      await updateEmail(auth.currentUser, updates.email);
     }
-    return response.data;
+
+    // Securely update password if provided
+    if (updates.password) {
+      await updatePassword(auth.currentUser, updates.password);
+      // Remove password from Firestore update payload
+      delete updates.password;
+    }
+
+    // Remove confirmPassword if present
+    delete updates.confirmPassword;
+
+    await updateDoc(userRef, {
+      ...updates,
+      updatedAt: new Date()
+    });
+
+    const updatedUser = { ...user, ...updates };
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+    
+    return { user: updatedUser };
   };
 
   return (

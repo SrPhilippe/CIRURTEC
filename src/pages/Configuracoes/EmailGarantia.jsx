@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import api from '../../services/api';
+import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { db } from '../../services/firebase';
 import { Mail, Save, AlertCircle, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import './Configuracoes.css';
 
@@ -17,8 +18,12 @@ export default function EmailGarantia() {
 
   const fetchUsers = async () => {
     try {
-      const response = await api.get('/auth/users');
-      setUsers(response.data);
+      const querySnapshot = await getDocs(collection(db, 'users'));
+      const usersData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setUsers(usersData);
     } catch (err) {
       console.error('Error fetching users:', err);
       setError('Erro ao carregar usuários. Verifique se você tem permissão.');
@@ -36,7 +41,8 @@ export default function EmailGarantia() {
     ));
 
     try {
-        await api.put(`/auth/users/${userId}/warranty-settings`, {
+        const userRef = doc(db, 'users', userId);
+        await updateDoc(userRef, {
             receive_warranty_emails: newValue
         });
         setSuccess('Configuração atualizada!');

@@ -4,6 +4,8 @@ import logo from '../assets/images/logo-cirurtec.png';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { Lock, User, LogIn, AlertCircle, Shield } from 'lucide-react';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { auth } from '../services/firebase';
 import './Login.css';
 
 const Login = () => {
@@ -15,42 +17,40 @@ const Login = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
+  // Forgot Password State
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotStatus, setForgotStatus] = useState({ loading: false, message: '', error: '' });
+
   const handleUsernameChange = (e) => {
     const value = e.target.value;
     setValidationError('');
     
     // If it looks like a username (not email), apply username rules
     if (!value.includes('@')) {
-      // Max 16 characters
       if (value.length > 16) {
         setValidationError('Nome de usuário deve ter no máximo 16 caracteres.');
         return;
       }
-      // No spaces
       if (/\s/.test(value)) {
         setValidationError('Nome de usuário não pode conter espaços.');
         return;
       }
-      // Valid characters only
       if (value !== '' && !/^[a-zA-Z0-9._@-]+$/.test(value)) {
         setValidationError('Caracteres inválidos no nome de usuário.');
         return;
       }
     }
-    
     setUsernameOrEmail(value);
   };
 
   const handlePasswordChange = (e) => {
     const value = e.target.value;
     setValidationError('');
-    
-    // Max 24 characters
     if (value.length > 24) {
       setValidationError('Senha deve ter no máximo 24 caracteres.');
       return;
     }
-    
     setPassword(value);
   };
 
@@ -69,44 +69,31 @@ const Login = () => {
       if (elapsed < minLoadTime) {
         await new Promise(resolve => setTimeout(resolve, minLoadTime - elapsed));
       }
-
-      navigate('/'); // Redirect to home after login
+      navigate('/');
     } catch (err) {
       setError('Falha no login. Verifique suas credenciais.');
-      // If error, we also need to respect min time if we want consistent UX, 
-      // or just let it close fast? Usually fast fail is fine, or consistent.
-      // Let's keep error fast for now, or user waits for nothing.
-      // But LoadingModal internal logic will handle the "visual" duration if we keep isOpen=true?
-      // No, we set loading=false in finally.
     } finally {
       setLoading(false);
     }
   };
 
-  // Forgot Password State
-  const [showForgotModal, setShowForgotModal] = useState(false);
-  const [forgotEmail, setForgotEmail] = useState('');
-  const [forgotStatus, setForgotStatus] = useState({ loading: false, message: '', error: '' });
-
   const handleForgotPassword = async (e) => {
     e.preventDefault();
     setForgotStatus({ loading: true, message: '', error: '' });
-    
     try {
-        await new Promise(resolve => setTimeout(resolve, 800)); // Slight delay for UX
-        const response = await fetch('http://localhost:5000/api/auth/forgot-password', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: forgotEmail })
-        });
-        
-        const data = await response.json();
-        setForgotStatus({ loading: false, message: data.message, error: '' });
-        
-        // Hide modal after 3 seconds
-        setTimeout(() => setShowForgotModal(false), 3000);
+        await sendPasswordResetEmail(auth, forgotEmail);
+        setForgotStatus({ loading: false, message: 'Link de redefinição enviado para seu e-mail!', error: '' });
+        setTimeout(() => {
+            setShowForgotModal(false);
+            setForgotStatus({ loading: false, message: '', error: '' });
+            setForgotEmail('');
+        }, 3000);
     } catch (error) {
-        setForgotStatus({ loading: false, message: '', error: 'Erro ao enviar solicitação.' });
+        console.error(error);
+        let errorMsg = 'Erro ao enviar solicitação.';
+        if (error.code === 'auth/user-not-found') errorMsg = 'E-mail não encontrado.';
+        if (error.code === 'auth/invalid-email') errorMsg = 'E-mail inválido.';
+        setForgotStatus({ loading: false, message: '', error: errorMsg });
     }
   };
 
@@ -131,8 +118,7 @@ const Login = () => {
                 <span>{validationError}</span>
             </div>
         )}
-
-        {/* LOGIN FORM */}
+        
         {!showForgotModal ? (
             <form onSubmit={handleSubmit} className="login-form">
               <div className="form-group">
@@ -176,9 +162,7 @@ const Login = () => {
                 </div>
               </div>
               <button type="submit" className="login-button" disabled={loading}>
-                {loading ? (
-                    'Entrando...'
-                ) : (
+                {loading ? 'Entrando...' : (
                     <>
                         <LogIn size={18} />
                         Entrar
@@ -187,7 +171,6 @@ const Login = () => {
               </button>
             </form>
         ) : (
-            /* FORGOT PASSWORD FORM */
             <form onSubmit={handleForgotPassword} className="login-form">
                 <h3 style={{ textAlign: 'center', marginBottom: '1rem', color: '#334155' }}>Recuperar Senha</h3>
                 <p style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '1.5rem', textAlign: 'center' }}>
@@ -236,9 +219,8 @@ const Login = () => {
                 </div>
             </form>
         )}
-
       </div>
-        <LoadingModal isOpen={loading} minDuration={50} message="Acessando o sistema..." />
+      <LoadingModal isOpen={loading} minDuration={50} message="Acessando o sistema..." />
     </div>
   );
 };

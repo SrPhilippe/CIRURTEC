@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import api from '../services/api';
+import { confirmPasswordReset } from 'firebase/auth';
+import { auth } from '../services/firebase';
 import { Lock, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react';
 import logo from '../assets/images/logo-cirurtec.png';
 import '../pages/Login.css'; // Reusing Login styles for consistency
@@ -8,7 +9,7 @@ import '../pages/Login.css'; // Reusing Login styles for consistency
 const RedefinirSenha = () => {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
-    const token = searchParams.get('token');
+    const oobCode = searchParams.get('oobCode') || searchParams.get('token');
 
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -20,7 +21,7 @@ const RedefinirSenha = () => {
         e.preventDefault();
         setMessage({ type: '', text: '' });
 
-        if (!token) {
+        if (!oobCode) {
             setMessage({ type: 'error', text: 'Token inválido ou ausente.' });
             return;
         }
@@ -38,18 +39,21 @@ const RedefinirSenha = () => {
         setLoading(true);
 
         try {
-            await api.post('/auth/reset-password', { token, newPassword });
+            await confirmPasswordReset(auth, oobCode, newPassword);
             setMessage({ type: 'success', text: 'Senha redefinida com sucesso!' });
             setTimeout(() => navigate('/login'), 3000);
         } catch (error) {
-            const errorMsg = error.response?.data?.message || 'Erro ao redefinir senha.';
+            console.error(error);
+            let errorMsg = 'Erro ao redefinir senha.';
+            if (error.code === 'auth/expired-action-code') errorMsg = 'O link expirou.';
+            if (error.code === 'auth/invalid-action-code') errorMsg = 'Link inválido.';
             setMessage({ type: 'error', text: errorMsg });
         } finally {
             setLoading(false);
         }
     };
 
-    if (!token) {
+    if (!oobCode) {
         return (
             <div className="login-container">
                 <div className="login-card" style={{ textAlign: 'center' }}>

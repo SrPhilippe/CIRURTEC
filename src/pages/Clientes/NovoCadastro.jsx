@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import api from '../../services/api';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, query, where, writeBatch } from 'firebase/firestore';
+import { db } from '../../services/firebase';
 import { Building2, Plus, Save, Trash2, Printer, ArrowLeft, Edit, X, ChevronDown, Copy, Check } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import { checkPermission, PERMISSIONS } from '../../utils/permissions';
@@ -52,7 +53,7 @@ const isValidDate = (dateString) => {
 };
 
 export default function NovoCadastro() {
-  const { id } = useParams();
+  const { id } = useParams(); // DocID is sanitized CNPJ
   const location = useLocation();
   const navigate = useNavigate();
   const isViewMode = !location.pathname.includes('/editar') && !!id;
@@ -109,7 +110,7 @@ export default function NovoCadastro() {
         contato1: '',
         contato2: ''
       });
-      setEquipments([{ id: 1, equipamento: '', modelo: '', numeroSerie: '', dataNota: '', tipoInstalacao: 'BAUMER' }]);
+      setEquipments([{ id: Date.now(), equipamento: '', modelo: '', numeroSerie: '', dataNota: '', tipoInstalacao: 'BAUMER' }]);
       setErrors({});
       setSuccessMessage('');
       setErrorMessage('');
@@ -120,8 +121,20 @@ export default function NovoCadastro() {
   useEffect(() => {
     const fetchHierarchy = async () => {
         try {
-            const response = await api.get('/equipment-settings/types');
-            setEquipmentTypes(response.data);
+            const settingsDoc = await getDoc(doc(db, 'settings', 'equipment_hierarchy'));
+            if (settingsDoc.exists()) {
+                const data = settingsDoc.data();
+                // data.types is an array: [ { id, name, models: [ { id, name } ] } ]
+                const types = (data.types || []).map(type => ({
+                    id: type.id,
+                    name: type.name,
+                    models: (type.models || []).map(model => ({
+                        id: model.id,
+                        name: model.name
+                    }))
+                }));
+                setEquipmentTypes(types);
+            }
         } catch (error) {
             console.error('Error fetching equipment hierarchy:', error);
         }
@@ -142,32 +155,42 @@ export default function NovoCadastro() {
     }
   }, [location.state]);
 
-  const fetchClientData = async (clientId) => {
+  const fetchClientData = async (docId) => {
     try {
       setLoading(true);
-      const response = await api.get(`/clients/${clientId}`);
-      const { client, equipments: clientEquipments } = response.data;
+      const clientDoc = await getDoc(doc(db, 'clients', docId));
       
-      setClientData({
-        cnpj: client.cnpj,
-        nomeHospital: client.nome_hospital,
-        nomeFantasia: client.nome_fantasia || '',
-        email1: client.email1,
-        email2: client.email2 || '',
-        contato1: client.contato1,
-        contato2: client.contato2 || ''
-      });
+      if (clientDoc.exists()) {
+        const client = clientDoc.data();
+        
+        // Fetch equipments associated with this client
+        const eqQuery = query(collection(db, 'equipments'), where('clientId', '==', client.cnpj));
+        const eqSnapshot = await getDocs(eqQuery);
+        const clientEquipments = eqSnapshot.docs.map(d => ({
+            id: d.id,
+            ...d.data()
+        }));
 
-      if (clientEquipments && clientEquipments.length > 0) {
-        setEquipments(clientEquipments.map(eq => ({
-            id: eq.id,
-            equipamento: eq.equipamento,
-            modelo: eq.modelo,
-            numeroSerie: eq.numero_serie, // Map from snake_case
-            dataNota: (eq.data_nota && !isNaN(new Date(eq.data_nota).getTime())) ? new Date(eq.data_nota).toISOString().split('T')[0] : '',
-            tipoInstalacao: eq.tipo_instalacao || 'BAUMER',
-            sentNotifications: eq.sentNotifications || []
-        })));
+        setClientData({
+          cnpj: client.cnpj,
+          nomeHospital: client.nome_hospital,
+          nomeFantasia: client.nome_fantasia || '',
+          email1: client.emails?.[0] || '',
+          email2: client.emails?.[1] || '',
+          contato1: client.contatos?.[0] || '',
+          contato2: client.contatos?.[1] || ''
+        });
+
+        if (clientEquipments.length > 0) {
+          setEquipments(clientEquipments.map(eq => ({
+              id: eq.id,
+              equipamento: eq.equipamento,
+              modelo: eq.modelo,
+              numeroSerie: eq.numeroSerie,
+              dataNota: eq.dataNota,
+              tipoInstalacao: eq.tipoInstalacao || 'BAUMER'
+          })));
+        }
       }
     } catch (error) {
       console.error('Error fetching client:', error);
@@ -187,10 +210,10 @@ export default function NovoCadastro() {
 
     try {
       // 1. Check local database first
-      const checkResponse = await api.get(`/clients/check-cnpj/${cleanCNPJ}`);
-      if (checkResponse.data.exists) {
+      const checkDoc = await getDoc(doc(db, 'clients', cleanCNPJ));
+      if (checkDoc.exists()) {
          // Redirect to existing client with warning
-         navigate(`/clientes/${checkResponse.data.id}`, { state: { duplicateCNPJ: true } });
+         navigate(`/clientes/${cleanCNPJ}`, { state: { duplicateCNPJ: true } });
          return; 
       }
 
@@ -445,7 +468,21 @@ export default function NovoCadastro() {
 
     // CLIENT Deletion
     try {
-      await api.delete(`/clients/${id}`);
+      const sanitizedCnpj = id.replace(/\D/g, '');
+      
+      // Delete associated equipments first? Or rely on a cleanup task.
+      // For now, let's delete associated equipments.
+      const eqQuery = query(collection(db, 'equipments'), where('clientId', '==', clientData.cnpj));
+      const eqSnapshot = await getDocs(eqQuery);
+      const batch = writeBatch(db);
+      
+      eqSnapshot.docs.forEach(d => {
+          batch.delete(d.ref);
+      });
+      
+      batch.delete(doc(db, 'clients', sanitizedCnpj));
+      await batch.commit();
+      
       navigate('/clientes/lista');
     } catch (error) {
       console.error('Erro ao excluir cliente:', error);
@@ -509,17 +546,65 @@ export default function NovoCadastro() {
     }
 
     try {
+      const sanitizedCnpj = clientData.cnpj.replace(/\D/g, '');
+      const batch = writeBatch(db);
+
+      const clientRef = doc(db, 'clients', sanitizedCnpj);
+      const clientPayload = {
+        cnpj: clientData.cnpj,
+        nome_hospital: clientData.nomeHospital,
+        nome_fantasia: clientData.nomeFantasia,
+        emails: [clientData.email1, clientData.email2].filter(Boolean),
+        contatos: [clientData.contato1, clientData.contato2].filter(Boolean),
+        updatedAt: new Date()
+      };
+
+      if (!id) {
+        clientPayload.createdAt = new Date();
+      }
+
+      batch.set(clientRef, clientPayload, { merge: true });
+
+      // Handle Equipments
+      // To simplify, we'll delete and re-add or just set with their IDs
+      // But we need to know which ones to delete if they were removed in the UI
+      
+      // If editing, find existing equipments to see if any need deletion
       if (id) {
-        await api.put(`/clients/${id}`, {
-          clientData,
-          equipments
-        });
+          const eqQuery = query(collection(db, 'equipments'), where('clientId', '==', clientData.cnpj));
+          const eqSnapshot = await getDocs(eqQuery);
+          const existingEqIds = eqSnapshot.docs.map(d => d.id);
+          const currentEqIds = equipments.map(eq => String(eq.id));
+          
+          existingEqIds.forEach(exId => {
+              if (!currentEqIds.includes(exId)) {
+                  batch.delete(doc(db, 'equipments', exId));
+              }
+          });
+      }
+
+      for (const eq of equipments) {
+          if (!eq.equipamento || !eq.modelo) continue;
+          
+          const eqId = isNaN(eq.id) ? doc(collection(db, 'equipments')).id : String(eq.id);
+          const eqRef = doc(db, 'equipments', eqId);
+          
+          batch.set(eqRef, {
+              clientId: clientData.cnpj,
+              equipamento: eq.equipamento,
+              modelo: eq.modelo,
+              numeroSerie: eq.numeroSerie,
+              dataNota: eq.dataNota,
+              tipoInstalacao: eq.tipoInstalacao,
+              updatedAt: new Date()
+          }, { merge: true });
+      }
+
+      await batch.commit();
+
+      if (id) {
         setSuccessMessage('Cliente atualizado com sucesso!');
       } else {
-        await api.post('/clients', {
-          clientData,
-          equipments
-        });
         setSuccessMessage('Cliente cadastrado com sucesso!');
       }
       
@@ -534,12 +619,11 @@ export default function NovoCadastro() {
             contato1: '',
             contato2: ''
         });
-        setEquipments([{ id: 1, equipamento: '', modelo: '', numeroSerie: '', dataNota: '', tipoInstalacao: 'BAUMER' }]);
+        setEquipments([{ id: Date.now(), equipamento: '', modelo: '', numeroSerie: '', dataNota: '', tipoInstalacao: 'BAUMER' }]);
       }
       setErrors({});
 
       // Clear success message after 5 seconds
-      // Clear success message after 5 seconds and redirect if edit/new
       setTimeout(() => {
         setSuccessMessage('');
         if (id) navigate('/clientes/lista');
@@ -547,8 +631,7 @@ export default function NovoCadastro() {
 
     } catch (error) {
       console.error('Error saving client:', error);
-      const message = error.response?.data?.message || 'Erro ao cadastrar cliente';
-      setErrorMessage(message);
+      setErrorMessage('Erro ao salvar os dados do cliente.');
     } finally {
       setLoading(false);
     }

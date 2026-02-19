@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import api from '../services/api';
+import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { db } from '../services/firebase';
 import { UsernameInput, EmailInput, PasswordInput } from '../components/FormInputs';
 import { User, Mail, Lock, Save, AlertCircle, CheckCircle, Trash2, X, ArrowLeft } from 'lucide-react';
-import { AuthContext } from '../context/AuthContext'; 
+import { AuthContext } from '../context/AuthContext';
 import { checkPermission, PERMISSIONS, ROLES } from '../utils/permissions';
 import './Perfil.css'; // Reusing settings styles
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
@@ -11,7 +12,7 @@ import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
 const EditUser = () => {
   const { id } = useParams(); // id here will be the public_ID string from URL
   const navigate = useNavigate();
-  const { user: currentUser, loading: authLoading } = useContext(AuthContext);
+  const { user: currentUser, loading: authLoading, updateProfile } = useContext(AuthContext);
   
   const [targetUserId, setTargetUserId] = useState(null); // Real numeric ID for permission checks locally
   
@@ -40,13 +41,12 @@ const EditUser = () => {
 
   const fetchUser = async () => {
     try {
-        const response = await api.get('/auth/users');
-        // 'id' from params is now public_ID (string) or numeric id (legacy/self)
-        // Find user by public_ID OR id
-        const user = response.data.find(u => u.public_ID === id || u.id.toString() === id);
+        const docRef = doc(db, 'users', id);
+        const docSnap = await getDoc(docRef);
         
-        if (user) {
-            setTargetUserId(user.id);
+        if (docSnap.exists()) {
+            const user = docSnap.data();
+            setTargetUserId(id);
             setOriginalUsername(user.username);
             setFormData({
                 username: user.username,
@@ -54,7 +54,7 @@ const EditUser = () => {
                 password: '',
                 confirmPassword: '',
                 role: user.role,
-                rights: user.rights // Usually 'rights' maps to permission level string
+                rights: user.rights
             });
         } else {
             setStatus({ type: 'error', message: 'Usuário não encontrado.' });
@@ -127,6 +127,8 @@ const EditUser = () => {
 
     setLoading(true);
     try {
+      const isSelf = currentUser.uid === id;
+      
       const updateData = {
         email: formData.email
       };
@@ -136,19 +138,24 @@ const EditUser = () => {
           updateData.username = formData.username;
       }
 
-      if (formData.password) {
-        updateData.password = formData.password;
-      }
-
       // Role Update
       if (checkPermission(currentUser, PERMISSIONS.EDIT_USER_ROLE, targetUser)) {
           updateData.role = formData.role;
-          // You might also want to update 'rights' based on role if your backend expects it, 
-          // or ideally backend handles it. For now we just send role.
       }
 
-      // Use 'id' from params which is public_ID, backend now supports it
-      await api.put(`/auth/users/${id}`, updateData);
+      if (isSelf) {
+          // If editing self, we can use updateProfile which handles password security
+          if (formData.password) {
+              updateData.password = formData.password;
+          }
+          await updateProfile(id, updateData);
+      } else {
+          // If editing another user, we MUST NOT include password in Firestore
+          // (Logic above handleSubmit already blocks this if not Self, but for safety it's excluded here too)
+          const userRef = doc(db, 'users', id);
+          await updateDoc(userRef, updateData);
+      }
+      
       setStatus({ type: 'success', message: 'Usuário atualizado com sucesso!' });
       
       setFormData(prev => ({ ...prev, password: '', confirmPassword: '' }));
@@ -159,10 +166,24 @@ const EditUser = () => {
       
     } catch (error) {
       console.error(error);
-      const errorMsg = error.response?.data?.message || 'Erro ao atualizar usuário';
-      setStatus({ type: 'error', message: errorMsg });
+      setStatus({ type: 'error', message: 'Erro ao atualizar usuário' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSendResetEmail = async () => {
+    try {
+        setLoading(true);
+        const { sendPasswordResetEmail } = await import('firebase/auth');
+        const { auth } = await import('../services/firebase');
+        await sendPasswordResetEmail(auth, formData.email);
+        setStatus({ type: 'success', message: 'E-mail de redefinição de senha enviado!' });
+    } catch (error) {
+        console.error(error);
+        setStatus({ type: 'error', message: 'Erro ao enviar e-mail de redefinição.' });
+    } finally {
+        setLoading(false);
     }
   };
 
@@ -176,7 +197,10 @@ const EditUser = () => {
     }
 
     try {
-      await api.delete(`/auth/users/${id}`);
+      // NOTE: Client SDK cannot delete other users or change their passwords.
+      // This will only delete the Firestore document. 
+      // A Cloud Function is needed for full user management.
+      await deleteDoc(doc(db, 'users', id));
       navigate('/users');
     } catch (error) {
        console.error(error);
@@ -248,26 +272,45 @@ const EditUser = () => {
           </div>
 
           <div className="divider">
-            <span>Alterar Senha (Opcional)</span>
+            <span>Alterar Senha {currentUser.uid !== id ? '(Via E-mail)' : '(Opcional)'}</span>
           </div>
 
-          <PasswordInput 
-            name="password"
-            label="Nova Senha"
-            placeholder="Deixe em branco para manter a atual"
-            value={formData.password}
-            onChange={handleChange}
-            required={false}
-          />
+          {currentUser.uid === id ? (
+            <>
+              <PasswordInput 
+                name="password"
+                label="Nova Senha"
+                placeholder="Deixe em branco para manter a atual"
+                value={formData.password}
+                onChange={handleChange}
+                required={false}
+              />
 
-          <PasswordInput 
-            name="confirmPassword"
-            label="Confirmar Nova Senha"
-            placeholder="Digite a nova senha novamente"
-            value={formData.confirmPassword}
-            onChange={handleChange}
-            required={false}
-          />
+              <PasswordInput 
+                name="confirmPassword"
+                label="Confirmar Nova Senha"
+                placeholder="Digite a nova senha novamente"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                required={false}
+              />
+            </>
+          ) : (
+            <div className="form-group" style={{ textAlign: 'center', padding: '1rem', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+                <p style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '1rem' }}>
+                    Por questões de segurança, a senha deve ser alterada pelo próprio usuário.
+                </p>
+                <button 
+                    type="button" 
+                    className="btn-secondary" 
+                    onClick={handleSendResetEmail}
+                    disabled={loading}
+                    style={{ width: '100%', justifyContent: 'center' }}
+                >
+                    <Mail size={18} /> Enviar E-mail de Redefinição
+                </button>
+            </div>
+          )}
 
           <div className="form-info">
              {/* Removed Cargo display since we have input now, maybe keep rights or info */}

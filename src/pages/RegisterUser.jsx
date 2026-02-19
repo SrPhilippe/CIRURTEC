@@ -1,7 +1,6 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import api from '../services/api';
 import { UsernameInput, EmailInput, PasswordInput } from '../components/FormInputs';
 import LoadingModal from '../components/LoadingModal';
 import { Mail, Lock, Shield, UserPlus, AlertCircle, CheckCircle, Briefcase, ArrowLeft } from 'lucide-react';
@@ -84,7 +83,8 @@ const RegisterUser = () => {
         rights: 'Padrão'
       });
     } catch (error) {
-      setMessage({ type: 'error', text: error.response?.data?.message || 'Erro ao registrar usuário' });
+      console.error(error);
+      setMessage({ type: 'error', text: error.message || 'Erro ao registrar usuário' });
     } finally {
       setLoading(false);
     }

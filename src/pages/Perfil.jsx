@@ -1,9 +1,7 @@
-
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { User, Mail, Lock, Save, AlertCircle, CheckCircle } from 'lucide-react';
 import { UsernameInput, EmailInput, PasswordInput } from '../components/FormInputs';
-import api from '../services/api';
 import './Perfil.css';
 
 const Perfil = () => {

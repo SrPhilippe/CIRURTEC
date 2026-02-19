@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../services/api';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../services/firebase';
 import { Users as UsersIcon, Search, Shield, ShieldAlert, User, UserPlus, Edit, ChevronDown, ChevronUp } from 'lucide-react';
 import './Users.css';
 
@@ -20,8 +21,13 @@ const Users = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await api.get('/auth/users');
-      setUsers(response.data);
+      const querySnapshot = await getDocs(collection(db, 'users'));
+      const usersData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        created_at: doc.data().createdAt?.toDate() || new Date()
+      }));
+      setUsers(usersData);
     } catch (err) {
       console.error(err);
       setError('Erro ao carregar usuários.');

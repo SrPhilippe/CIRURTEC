@@ -1,0 +1,93 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // --- Helper Functions ---
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function getRole() {
+      // Normalize role checking both 'rights' and 'role' fields
+      let data = getUserData();
+      return data.rights != null ? data.rights : data.role;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && getRole() == 'ADMIN';
+    }
+    
+    function isMaster() {
+      return isAuthenticated() && getRole() == 'Master';
+    }
+    
+    function isPadrao() {
+      let role = getRole();
+      return isAuthenticated() && (role == 'Padrão' || role == 'PADRÃO');
+    }
+
+    // --- Collection Rules ---
+
+    match /users/{userId} {
+      // Users can see their own profile. Admin and Master can see all.
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin() || isMaster());
+      
+      // Admin and Master can create users.
+      allow create: if isAdmin() || isMaster();
+      
+      // Update logic:
+      // - Admin can update everything.
+      // - Users can update their own email/password but not rights/role/username.
+      // - Master can update users but not ADMINs.
+      allow update: if isAdmin() || 
+                    (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['rights', 'role', 'username', 'public_ID'])) ||
+                    (isMaster() && get(/databases/$(database)/documents/users/$(userId)).data.rights != 'ADMIN');
+      
+      // Delete logic:
+      // - Admin can delete anyone.
+      // - Master can delete anyone except ADMINs.
+      allow delete: if isAdmin() || (isMaster() && get(/databases/$(database)/documents/users/$(userId)).data.rights != 'ADMIN');
+    }
+
+    match /clients/{cnpj} {
+      // All authenticated users can read clients.
+      allow read: if isAuthenticated();
+      
+      // All roles (Admin, Master, Padrão) can create clients.
+      allow create: if isAuthenticated(); 
+      
+      // Update:
+      // - Admin/Master can update everything.
+      // - Padrão cannot update 'cnpj'.
+      allow update: if isAdmin() || isMaster() || (isPadrao() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['cnpj']));
+      
+      // Delete:
+      // - Admin and Master can delete clients.
+      // - Padrão cannot.
+      allow delete: if isAdmin() || isMaster();
+    }
+
+    match /equipments/{eqId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isAdmin() || isMaster();
+    }
+    
+    match /settings/{settingId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /notifications/{notifId} {
+      allow read: if isAuthenticated();
+      // Writing is handled by Cloud Functions (Admin SDK)
+      allow write: if false; 
+    }
+  }
+}
