@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { UsernameInput, EmailInput, PasswordInput } from '../components/FormInputs';
-import { User, Mail, Lock, Save, AlertCircle, CheckCircle, Trash2, X, ArrowLeft } from 'lucide-react';
+import { User, Mail, Lock, Save, AlertCircle, CheckCircle, Trash2, X, ArrowLeft, RefreshCw } from 'lucide-react';
+import api from '../services/api';
 import { AuthContext } from '../context/AuthContext';
 import { checkPermission, PERMISSIONS, ROLES } from '../utils/permissions';
 import './Perfil.css'; // Reusing settings styles
@@ -187,6 +188,29 @@ const EditUser = () => {
     }
   };
 
+  const handleResetToDefault = async () => {
+    if (!window.confirm(`Tem certeza que deseja redefinir a senha de ${formData.username} para o padrão do sistema?`)) {
+        return;
+    }
+
+    try {
+        setLoading(true);
+        const response = await api.post('/auth/reset-user-password-default', {
+            targetUid: id
+        });
+        
+        setStatus({ 
+            type: 'success', 
+            message: `Senha redefinida com sucesso! A nova senha é: ${response.data.defaultPassword}` 
+        });
+    } catch (error) {
+        console.error(error);
+        setStatus({ type: 'error', message: 'Erro ao redefinir para a senha padrão.' });
+    } finally {
+        setLoading(false);
+    }
+  };
+
   const handleDeleteAccount = async () => {
     // Permission Check
     const targetUser = { id: targetUserId || parseInt(id), role: formData.role };
@@ -305,10 +329,22 @@ const EditUser = () => {
                     className="btn-secondary" 
                     onClick={handleSendResetEmail}
                     disabled={loading}
-                    style={{ width: '100%', justifyContent: 'center' }}
+                    style={{ width: '100%', justifyContent: 'center', marginBottom: '0.5rem' }}
                 >
                     <Mail size={18} /> Enviar E-mail de Redefinição
                 </button>
+
+                {currentUser.rights === 'ADMIN' && (
+                    <button 
+                        type="button" 
+                        className="btn-secondary" 
+                        onClick={handleResetToDefault}
+                        disabled={loading}
+                        style={{ width: '100%', justifyContent: 'center', backgroundColor: '#f0f9ff', color: '#0369a1', borderColor: '#bae6fd' }}
+                    >
+                        <RefreshCw size={18} /> Redefinir para Senha Padrão
+                    </button>
+                )}
             </div>
           )}
 

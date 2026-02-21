@@ -19,6 +19,8 @@ import Button from '../../components/ui/Button';
 
 registerLocale('pt-BR', ptBR);
 
+const { randomUUID } = window.crypto;
+
 // Helper functions (outside component or inside)
 const formatPhone = (value) => {
   const digits = value.replace(/\D/g, '').slice(0, 11);
@@ -552,7 +554,7 @@ export default function NovoCadastro() {
       const batch = writeBatch(db);
       
       // clientId will be the UUID (id from URL if editing, or new one)
-      const clientId = id || self.crypto.randomUUID();
+      const clientId = id || randomUUID();
       const clientRef = doc(db, 'clients', clientId);
       
       const clientPayload = {

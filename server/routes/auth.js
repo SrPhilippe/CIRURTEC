@@ -345,4 +345,64 @@ router.delete('/users/:idOrPublicId', [verifyToken, verifyAdmin], async (req, re
     }
 })
 
+// Update User Profile
+// ... (existing code)
+
+// Reset User Password to Default (Admin/Master Only)
+router.post('/reset-user-password-default', [verifyToken, verifyAdmin], async (req, res) => {
+    const { targetUid } = req.body
+
+    if (!targetUid) {
+        return res.status(400).json({ message: 'Target User UID is required' })
+    }
+
+    try {
+        const { default: admin, adminAuth, adminDb } = await import('../firebase-admin.js')
+
+        // 1. Get User Data from Firestore
+        const userDoc = await adminDb.collection('users').doc(targetUid).get()
+        if (!userDoc.exists()) {
+            return res.status(404).json({ message: 'User not found' })
+        }
+
+        const userData = userDoc.data()
+        const username = userData.username
+
+        // 2. Calculate Default Password Pattern
+        // Pattern: FirstChar + Month + MiddleChar + LastChar + Year
+        const now = new Date()
+        const month = String(now.getMonth() + 1).padStart(2, '0')
+        const year = String(now.getFullYear())
+
+        const firstChar = username.charAt(0).toUpperCase()
+        const lastChar = username.charAt(username.length - 1).toUpperCase()
+        const middleIndex = Math.floor(username.length / 2)
+        const middleChar = username.charAt(middleIndex).toUpperCase()
+
+        const defaultPassword = `${firstChar}${month}${middleChar}${lastChar}${year}`
+
+        // 3. Update Password in Firebase Auth
+        await adminAuth.updateUser(targetUid, {
+            password: defaultPassword
+        })
+
+        // 4. Ensure no plain-text password exists in Firestore (Security cleanup)
+        if (userData.password) {
+            await adminDb.collection('users').doc(targetUid).update({
+                password: admin.firestore.FieldValue.delete(),
+                updatedAt: new Date()
+            })
+        }
+
+        res.json({
+            message: 'Senha redefinida com sucesso para o padrão do sistema.',
+            defaultPassword: defaultPassword // Optional: inform the admin what the password is
+        })
+
+    } catch (error) {
+        console.error('Reset Default Password Error:', error)
+        res.status(500).json({ message: 'Erro ao redefinir senha para o padrão.' })
+    }
+})
+
 export default router
