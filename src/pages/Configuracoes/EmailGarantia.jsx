@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import { Mail, Save, AlertCircle, Search, ChevronDown, ChevronUp } from 'lucide-react';
+import Alert from '../../components/Alert';
 import './Configuracoes.css';
 
 export default function EmailGarantia() {
@@ -87,15 +88,20 @@ export default function EmailGarantia() {
       </div>
 
       {error && (
-        <div className="alert alert-error">
-          <AlertCircle size={18} /> {error}
-        </div>
+        <Alert 
+          message={error} 
+          type="error" 
+          onClose={() => setError('')} 
+        />
       )}
 
       {success && (
-        <div className="alert alert-success">
-          {success}
-        </div>
+        <Alert 
+          message={success} 
+          type="success" 
+          onClose={() => setSuccess('')} 
+          duration={2000} // Custom duration of 2 seconds
+        />
       )}
 
       <div className="config-card">

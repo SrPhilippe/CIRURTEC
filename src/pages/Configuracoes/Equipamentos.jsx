@@ -5,6 +5,7 @@ import { db } from '../../services/firebase';
 import './Equipamentos.css';
 import { AuthContext } from '../../context/AuthContext';
 import DeleteConfirmationModal from '../../components/DeleteConfirmationModal';
+import Alert from '../../components/Alert';
 
 const Equipamentos = () => {
     const { user } = useContext(AuthContext);
@@ -152,11 +153,11 @@ const Equipamentos = () => {
             </div>
 
             {error && (
-                <div className="bg-red-50 text-red-700 p-4 rounded-lg mb-6 flex items-center gap-2 border border-red-200">
-                    <AlertCircle size={20} />
-                    {error}
-                    <button onClick={() => setError(null)} className="ml-auto p-1"><X size={16} /></button>
-                </div>
+                <Alert 
+                  message={error} 
+                  type="error" 
+                  onClose={() => setError(null)} 
+                />
             )}
 
             {canManageTypes && (

@@ -4,6 +4,7 @@ import { AuthContext } from '../context/AuthContext';
 import { UsernameInput, EmailInput, PasswordInput } from '../components/FormInputs';
 import LoadingModal from '../components/LoadingModal';
 import { Mail, Lock, Shield, UserPlus, AlertCircle, CheckCircle, Briefcase, ArrowLeft } from 'lucide-react';
+import Alert from '../components/Alert';
 import { checkPermission, PERMISSIONS } from '../utils/permissions';
 import './RegisterUser.css';
 
@@ -102,10 +103,11 @@ const RegisterUser = () => {
         </div>
 
         {message.text && (
-          <div className={message.type === 'success' ? 'success-message' : 'error-message'}>
-            {message.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
-            <span>{message.text}</span>
-          </div>
+          <Alert 
+            message={message.text} 
+            type={message.type} 
+            onClose={() => setMessage({ type: '', text: '' })} 
+          />
         )}
 
         <form onSubmit={handleSubmit} className="register-form">

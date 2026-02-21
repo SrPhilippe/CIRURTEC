@@ -9,6 +9,7 @@ import { AuthContext } from '../context/AuthContext';
 import { checkPermission, PERMISSIONS, ROLES } from '../utils/permissions';
 import './Perfil.css'; // Reusing settings styles
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
+import Alert from '../components/Alert';
 
 const EditUser = () => {
   const { id } = useParams(); // id here will be the public_ID string from URL
@@ -116,6 +117,10 @@ const EditUser = () => {
     }
 
     if (formData.password) {
+        if (formData.password.length < 6) {
+            setStatus({ type: 'error', message: 'A senha deve ter pelo menos 6 caracteres.' });
+            return;
+        }
         if (formData.password.length > 24) {
             setStatus({ type: 'error', message: 'A senha deve ter no máximo 24 caracteres.' });
             return;
@@ -167,7 +172,17 @@ const EditUser = () => {
       
     } catch (error) {
       console.error(error);
-      setStatus({ type: 'error', message: 'Erro ao atualizar usuário' });
+      let errorMsg = 'Erro ao atualizar usuário';
+      
+      if (error.code === 'auth/weak-password') {
+        errorMsg = 'A senha é muito fraca. Deve ter pelo menos 6 caracteres.';
+      } else if (error.code === 'auth/requires-recent-login') {
+        errorMsg = 'Para alterar a senha, você precisa fazer login novamente recentemente.';
+      } else if (error.message) {
+        errorMsg = error.message;
+      }
+
+      setStatus({ type: 'error', message: errorMsg });
     } finally {
       setLoading(false);
     }
@@ -257,10 +272,11 @@ const EditUser = () => {
         </div>
 
         {status.message && (
-          <div className={`status-message ${status.type}`}>
-            {status.type === 'error' ? <AlertCircle size={20} /> : <CheckCircle size={20} />}
-            <span>{status.message}</span>
-          </div>
+          <Alert 
+            message={status.message} 
+            type={status.type} 
+            onClose={() => setStatus({ type: '', message: '' })} 
+          />
         )}
 
         <form onSubmit={handleSubmit} className="settings-form">

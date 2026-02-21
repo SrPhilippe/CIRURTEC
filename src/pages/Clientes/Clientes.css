@@ -602,6 +602,7 @@
 
     .clients-table tbody {
         display: block;
+        background-color: white !important;
     }
 
     .clients-table tbody tr {

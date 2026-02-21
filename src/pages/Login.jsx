@@ -3,9 +3,10 @@ import LoadingModal from '../components/LoadingModal';
 import logo from '../assets/images/logo-cirurtec.png';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { Lock, User, LogIn, AlertCircle, Shield } from 'lucide-react';
+import { Lock, User, LogIn, AlertCircle, Shield, Eye, EyeOff } from 'lucide-react';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../services/firebase';
+import Alert from '../components/Alert';
 import './Login.css';
 
 const Login = () => {
@@ -16,6 +17,7 @@ const Login = () => {
   const { login } = useContext(AuthContext);
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Forgot Password State
   const [showForgotModal, setShowForgotModal] = useState(false);
@@ -106,17 +108,19 @@ const Login = () => {
         </div>
 
         {error && (
-            <div className="error-message">
-                <AlertCircle size={18} />
-                <span>{error}</span>
-            </div>
+            <Alert 
+              message={error} 
+              type="error" 
+              onClose={() => setError('')} 
+            />
         )}
         
         {validationError && (
-            <div className="error-message">
-                <AlertCircle size={18} />
-                <span>{validationError}</span>
-            </div>
+            <Alert 
+              message={validationError} 
+              type="error" 
+              onClose={() => setValidationError('')} 
+            />
         )}
         
         {!showForgotModal ? (
@@ -142,13 +146,35 @@ const Login = () => {
                   <Lock size={18} className="field-icon" />
                   <input
                     id="password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     className="form-input"
                     placeholder="Digite sua senha"
                     value={password}
                     onChange={handlePasswordChange}
                     required
+                    style={{ paddingRight: '45px' }}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="password-toggle"
+                    style={{
+                      position: 'absolute',
+                      right: '12px',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: '#9ca3af',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '4px',
+                      borderRadius: '4px',
+                      transition: 'color 0.2s'
+                    }}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
                 <div style={{ textAlign: 'right', marginTop: '8px' }}>
                     <button 
@@ -178,15 +204,18 @@ const Login = () => {
                 </p>
 
                 {forgotStatus.message && (
-                    <div className="alert alert-success" style={{ padding: '10px', marginBottom: '15px', borderRadius: '4px', backgroundColor: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0' }}>
-                        {forgotStatus.message}
-                    </div>
+                    <Alert 
+                      message={forgotStatus.message} 
+                      type="success" 
+                      onClose={() => setForgotStatus(prev => ({ ...prev, message: '' }))} 
+                    />
                 )}
                 {forgotStatus.error && (
-                    <div className="error-message">
-                        <AlertCircle size={18} />
-                        <span>{forgotStatus.error}</span>
-                    </div>
+                    <Alert 
+                      message={forgotStatus.error} 
+                      type="error" 
+                      onClose={() => setForgotStatus(prev => ({ ...prev, error: '' }))} 
+                    />
                 )}
 
                 <div className="form-group">

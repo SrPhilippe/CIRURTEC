@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { User, Mail, Lock, Save, AlertCircle, CheckCircle } from 'lucide-react';
 import { UsernameInput, EmailInput, PasswordInput } from '../components/FormInputs';
+import Alert from '../components/Alert';
 import './Perfil.css';
 
 const Perfil = () => {
@@ -45,9 +46,15 @@ const Perfil = () => {
     e.preventDefault();
     setStatus({ type: '', message: '' });
     
-    if (formData.password && formData.password !== formData.confirmPassword) {
-      setStatus({ type: 'error', message: 'As senhas não coincidem' });
-      return;
+    if (formData.password) {
+      if (formData.password.length < 6) {
+        setStatus({ type: 'error', message: 'A senha deve ter pelo menos 6 caracteres' });
+        return;
+      }
+      if (formData.password !== formData.confirmPassword) {
+        setStatus({ type: 'error', message: 'As senhas não coincidem' });
+        return;
+      }
     }
 
     setLoading(true);
@@ -69,7 +76,18 @@ const Perfil = () => {
       
     } catch (error) {
       console.error(error);
-      const errorMsg = error.response?.data?.message || 'Erro ao atualizar perfil';
+      let errorMsg = 'Erro ao atualizar perfil';
+      
+      if (error.code === 'auth/weak-password') {
+        errorMsg = 'A senha é muito fraca. Deve ter pelo menos 6 caracteres.';
+      } else if (error.code === 'auth/requires-recent-login') {
+        errorMsg = 'Para alterar sua senha ou e-mail, você precisa fazer login novamente recentemente.';
+      } else if (error.code === 'auth/email-already-in-use') {
+        errorMsg = 'Este e-mail já está em uso por outra conta.';
+      } else if (error.message) {
+        errorMsg = error.message;
+      }
+
       setStatus({ type: 'error', message: errorMsg });
     } finally {
       setLoading(false);
@@ -88,10 +106,11 @@ const Perfil = () => {
         </div>
 
         {status.message && (
-          <div className={`status-message ${status.type}`}>
-            {status.type === 'error' ? <AlertCircle size={20} /> : <CheckCircle size={20} />}
-            <span>{status.message}</span>
-          </div>
+          <Alert 
+            message={status.message} 
+            type={status.type} 
+            onClose={() => setStatus({ type: '', message: '' })} 
+          />
         )}
 
         <form onSubmit={handleSubmit} className="settings-form">

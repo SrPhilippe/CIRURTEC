@@ -4,6 +4,7 @@ import { confirmPasswordReset } from 'firebase/auth';
 import { auth } from '../services/firebase';
 import { Lock, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react';
 import logo from '../assets/images/logo-cirurtec.png';
+import Alert from '../components/Alert';
 import '../pages/Login.css'; // Reusing Login styles for consistency
 
 const RedefinirSenha = () => {
@@ -58,10 +59,12 @@ const RedefinirSenha = () => {
             <div className="login-container">
                 <div className="login-card" style={{ textAlign: 'center' }}>
                      <img src={logo} alt="CIRURTEC" className="login-logo" />
-                     <div className="alert-message error">
-                        <AlertCircle size={20} />
-                        <span>Link inválido ou expirado.</span>
-                     </div>
+                     <Alert 
+                        message="Link inválido ou expirado." 
+                        type="error" 
+                        onClose={() => navigate('/login')} 
+                        duration={0} // Don't auto-dismiss this one as it's a blocking error
+                     />
                      <button className="login-button" onClick={() => navigate('/login')}>
                         Voltar ao Login
                     </button>
@@ -116,10 +119,11 @@ const RedefinirSenha = () => {
                     </div>
 
                     {message.text && (
-                        <div className={`alert-message ${message.type}`}>
-                            {message.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
-                            <span>{message.text}</span>
-                        </div>
+                        <Alert 
+                          message={message.text} 
+                          type={message.type} 
+                          onClose={() => setMessage({ type: '', text: '' })} 
+                        />
                     )}
 
                     <button type="submit" className="login-button" disabled={loading}>
