@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useContext } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, query, where, writeBatch } from 'firebase/firestore';
 import { db } from '../../services/firebase';
+import { nanoid } from 'nanoid';
 import { Building2, Plus, Save, Trash2, Printer, ArrowLeft, Edit, X, ChevronDown, Copy, Check } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 import { checkPermission, PERMISSIONS } from '../../utils/permissions';
@@ -164,7 +165,8 @@ export default function NovoCadastro() {
         const client = clientDoc.data();
         
         // Fetch equipments associated with this client
-        const eqQuery = query(collection(db, 'equipments'), where('clientId', '==', client.cnpj));
+        // Search equipment by the client's internal ID (UUID)
+        const eqQuery = query(collection(db, 'equipments'), where('clientId', '==', clientDoc.id));
         const eqSnapshot = await getDocs(eqQuery);
         const clientEquipments = eqSnapshot.docs.map(d => ({
             id: d.id,
@@ -209,11 +211,15 @@ export default function NovoCadastro() {
     const cleanCNPJ = cnpj.replace(/\D/g, '');
 
     try {
-      // 1. Check local database first
-      const checkDoc = await getDoc(doc(db, 'clients', cleanCNPJ));
-      if (checkDoc.exists()) {
-         // Redirect to existing client with warning
-         navigate(`/clientes/${cleanCNPJ}`, { state: { duplicateCNPJ: true } });
+      // 1. Check local database first by CNPJ
+      // Use the formatted CNPJ for comparison if that's how it's stored
+      const formattedCnpj = formatCNPJ(cnpj);
+      const clientsQuery = query(collection(db, 'clients'), where('cnpj', '==', formattedCnpj));
+      const clientsSnapshot = await getDocs(clientsQuery);
+      
+      if (!clientsSnapshot.empty) {
+         // Redirect to existing client with warning using the document ID (UUID)
+         navigate(`/clientes/${clientsSnapshot.docs[0].id}`, { state: { duplicateCNPJ: true } });
          return; 
       }
 
@@ -468,11 +474,8 @@ export default function NovoCadastro() {
 
     // CLIENT Deletion
     try {
-      const sanitizedCnpj = id.replace(/\D/g, '');
-      
-      // Delete associated equipments first? Or rely on a cleanup task.
-      // For now, let's delete associated equipments.
-      const eqQuery = query(collection(db, 'equipments'), where('clientId', '==', clientData.cnpj));
+      // Delete associated equipments first
+      const eqQuery = query(collection(db, 'equipments'), where('clientId', '==', id));
       const eqSnapshot = await getDocs(eqQuery);
       const batch = writeBatch(db);
       
@@ -480,7 +483,7 @@ export default function NovoCadastro() {
           batch.delete(d.ref);
       });
       
-      batch.delete(doc(db, 'clients', sanitizedCnpj));
+      batch.delete(doc(db, 'clients', id));
       await batch.commit();
       
       navigate('/clientes/lista');
@@ -546,10 +549,12 @@ export default function NovoCadastro() {
     }
 
     try {
-      const sanitizedCnpj = clientData.cnpj.replace(/\D/g, '');
       const batch = writeBatch(db);
-
-      const clientRef = doc(db, 'clients', sanitizedCnpj);
+      
+      // clientId will be the UUID (id from URL if editing, or new one)
+      const clientId = id || self.crypto.randomUUID();
+      const clientRef = doc(db, 'clients', clientId);
+      
       const clientPayload = {
         cnpj: clientData.cnpj,
         nome_hospital: clientData.nomeHospital,
@@ -561,6 +566,7 @@ export default function NovoCadastro() {
 
       if (!id) {
         clientPayload.createdAt = new Date();
+        clientPayload.public_ID = nanoid();
       }
 
       batch.set(clientRef, clientPayload, { merge: true });
@@ -571,7 +577,7 @@ export default function NovoCadastro() {
       
       // If editing, find existing equipments to see if any need deletion
       if (id) {
-          const eqQuery = query(collection(db, 'equipments'), where('clientId', '==', clientData.cnpj));
+          const eqQuery = query(collection(db, 'equipments'), where('clientId', '==', id));
           const eqSnapshot = await getDocs(eqQuery);
           const existingEqIds = eqSnapshot.docs.map(d => d.id);
           const currentEqIds = equipments.map(eq => String(eq.id));
@@ -590,7 +596,7 @@ export default function NovoCadastro() {
           const eqRef = doc(db, 'equipments', eqId);
           
           batch.set(eqRef, {
-              clientId: clientData.cnpj,
+              clientId: clientId, // Use UUID instead of CNPJ
               equipamento: eq.equipamento,
               modelo: eq.modelo,
               numeroSerie: eq.numeroSerie,

@@ -57,11 +57,11 @@ export default function ClientesCadastrados() {
       for (const clientDoc of querySnapshot.docs) {
         const data = clientDoc.data();
         // Fetch equipments associated with this client
-        // In my migration script, equipments.clientId is the client's CNPJ
+        // Search equipment by the client's internal ID (UUID)
         const eqSnapshot = await getDocs(collection(db, 'equipments'));
         const clientEquipments = eqSnapshot.docs
             .map(d => d.data())
-            .filter(eq => eq.clientId === data.cnpj);
+            .filter(eq => eq.clientId === clientDoc.id);
 
         clientsData.push({
           id: clientDoc.id,
@@ -389,14 +389,14 @@ export default function ClientesCadastrados() {
                           <button 
                             className="btn-icon btn-view" 
                             title="Visualizar"
-                            onClick={() => navigate(`/clientes/${client.cnpj.replace(/\D/g, '')}`)}
+                            onClick={() => navigate(`/clientes/${client.id}`)}
                           >
                             <Eye size={18} />
                           </button>
                           <button 
                             className="btn-icon btn-edit" 
                             title="Editar"
-                            onClick={() => navigate(`/clientes/editar/${client.cnpj.replace(/\D/g, '')}`)}
+                            onClick={() => navigate(`/clientes/editar/${client.id}`)}
                           >
                             <Edit size={18} />
                           </button>
